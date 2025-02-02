@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "my-custom-device-config"
+deviceList:
+  name: "my-custom-device"
+  profileName: "my-custom-device-profile"
+  description: "MQTT device is created for test purpose"
+  labels: 
+    - "MQTT"
+    - "test"
+  protocols:
+    mqtt:
+       CommandTopic: "command/my-custom-device"
+  autoEvents:
+   interval: "5"
+   onChange: false
+   sourceName: "message"

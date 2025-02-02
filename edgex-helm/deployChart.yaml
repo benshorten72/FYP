@@ -1,0 +1,2943 @@
+---
+# Source: EdgeX/templates/configmaps/edgex-configmap.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: edgex-common-variables
+data:
+  EDGEX_SECURITY_SECRET_STORE: "false"
+---
+# Source: EdgeX/templates/configmaps/edgex-device-c-sdk-environment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# C SDK in EdgeX 3.0 does not yet support common config;
+# Use env var override for what is normally in common config
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: edgex-device-c-sdk-environment
+data:
+  CLIENTS_CORE_METADATA_HOST: edgex-core-metadata
+  DATABASE_HOST: edgex-redis
+  REGISTRY_HOST: edgex-core-consul
+  MESSAGEBUS_HOST: edgex-redis
+  MESSAGEBUS_AUTHMODE: none
+---
+# Source: EdgeX/templates/edgex-pv.yaml
+# Copyright (C) 2023 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: edgex-consul-config-volume
+spec:
+  storageClassName: ""
+  claimRef:
+    name: consul-config
+    namespace: default
+  capacity:
+    storage: 8Mi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/edgex-consul-config"
+    type: DirectoryOrCreate
+---
+# Source: EdgeX/templates/edgex-pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: edgex-consul-data-volume
+spec:
+  storageClassName: ""
+  claimRef:
+    name: consul-data
+    namespace: default
+  capacity:
+    storage: 128Mi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/edgex-consul-data"
+    type: DirectoryOrCreate
+---
+# Source: EdgeX/templates/edgex-pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: edgex-db-volume
+spec:
+  storageClassName: ""
+  claimRef:
+    name: db-data
+    namespace: default
+  capacity:
+    storage: 512Mi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/edgex-db"
+    type: DirectoryOrCreate
+---
+# Source: EdgeX/templates/edgex-pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: edgex-kuiper-data
+spec:
+  storageClassName: ""
+  claimRef:
+    name: kuiper-data
+    namespace: default
+  capacity:
+    storage: 128Mi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/edgex-kuiper-data"
+    type: DirectoryOrCreate
+---
+# Source: EdgeX/templates/edgex-pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: edgex-kuiper-etc
+spec:
+  storageClassName: ""
+  claimRef:
+    name: kuiper-etc
+    namespace: default
+  capacity:
+    storage: 8Mi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/edgex-kuiper-etc"
+    type: DirectoryOrCreate
+---
+# Source: EdgeX/templates/edgex-pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: edgex-kuiper-log
+spec:
+  storageClassName: ""
+  claimRef:
+    name: kuiper-log
+    namespace: default
+  capacity:
+    storage: 128Mi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/edgex-kuiper-log"
+    type: DirectoryOrCreate
+---
+# Source: EdgeX/templates/edgex-pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: edgex-kuiper-plugins
+spec:
+  storageClassName: ""
+  claimRef:
+    name: kuiper-plugins
+    namespace: default
+  capacity:
+    storage: 128Mi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/edgex-kuiper-plugins"
+    type: DirectoryOrCreate
+---
+# Source: EdgeX/templates/edgex-pvc.yaml
+# Copyright (C) 2023 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: consul-config
+spec:
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 8Mi
+---
+# Source: EdgeX/templates/edgex-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: consul-data
+spec:
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 128Mi
+---
+# Source: EdgeX/templates/edgex-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db-data
+spec:
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 512Mi
+---
+# Source: EdgeX/templates/edgex-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kuiper-data
+spec:
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 128Mi
+---
+# Source: EdgeX/templates/edgex-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kuiper-etc
+spec:
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 8Mi
+---
+# Source: EdgeX/templates/edgex-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kuiper-log
+spec:
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 128Mi
+---
+# Source: EdgeX/templates/edgex-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kuiper-plugins
+spec:
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 128Mi
+---
+# Source: EdgeX/templates/edgex-app-external-mqtt-trigger/edgex-app-external-mqtt-trigger-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-external-mqtt-trigger
+  name: edgex-app-external-mqtt-trigger
+spec:
+  ports:
+  - name: "http"
+    port: 59706
+  selector:
+    org.edgexfoundry.service: edgex-app-external-mqtt-trigger
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-app-http-export/edgex-app-http-export-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-http-export
+  name: edgex-app-http-export
+spec:
+  ports:
+  - name: "http"
+    port: 59704
+  selector:
+    org.edgexfoundry.service: edgex-app-http-export
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-app-metrics-influxdb/edgex-app-metrics-influxdb-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-metrics-influxdb
+  name: edgex-app-metrics-influxdb
+spec:
+  ports:
+  - name: "http"
+    port: 59707
+  selector:
+    org.edgexfoundry.service: edgex-app-metrics-influxdb
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-app-mqtt-export/edgex-app-mqtt-export-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-mqtt-export
+  name: edgex-app-mqtt-export
+spec:
+  ports:
+  - name: "http"
+    port: 59703
+  selector:
+    org.edgexfoundry.service: edgex-app-mqtt-export
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-app-record-replay/edgex-app-record-replay.yaml
+# Copyright (C) 2023 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-record-replay
+  name: edgex-app-record-replay
+spec:
+  ports:
+  - name: "http"
+    port: 59712
+  selector:
+    org.edgexfoundry.service: edgex-app-record-replay
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-app-rfid-llrp-inventory/edgex-app-rfid-llrp-inventory-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-rfid-llrp-inventory
+  name: edgex-app-rfid-llrp-inventory
+spec:
+  ports:
+  - name: "http"
+    port: 59711
+  selector:
+    org.edgexfoundry.service: edgex-app-rfid-llrp-inventory
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-app-sample/edgex-app-sample-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-sample
+  name: edgex-app-sample
+spec:
+  ports:
+  - name: "http"
+    port: 59700
+  selector:
+    org.edgexfoundry.service: edgex-app-sample
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-appservice-rules/edgex-app-rules-engine-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-rules-engine
+  name: edgex-app-rules-engine
+spec:
+  ports:
+  - name: "http"
+    port: 59701
+  selector:
+    org.edgexfoundry.service: edgex-app-rules-engine
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-consul/edgex-consul-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-core-consul
+  name: edgex-core-consul
+spec:
+  ports:
+  - name: "http"
+    port: 8500
+  selector:
+    org.edgexfoundry.service: edgex-core-consul
+  type: NodePort
+---
+# Source: EdgeX/templates/edgex-core-command/edgex-core-command-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-core-command
+  name: edgex-core-command
+spec:
+  ports:
+  - name: "http"
+    port: 59882
+  selector:
+    org.edgexfoundry.service: edgex-core-command
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-core-data/edgex-core-data-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-core-data
+  name: edgex-core-data
+spec:
+  ports:
+  - name: "http"
+    port: 59880
+  selector:
+    org.edgexfoundry.service: edgex-core-data
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-device-bacnet/edgex-device-bacnet-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-bacnet
+  name: edgex-device-bacnet
+spec:
+  ports:
+  - name: "http"
+    port: 59980
+  selector:
+    org.edgexfoundry.service: edgex-device-bacnet
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-device-coap/edgex-device-coap-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-coap
+  name: edgex-device-coap
+spec:
+  ports:
+  - name: "http"
+    port: 59988
+  selector:
+    org.edgexfoundry.service: edgex-device-coap
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-device-gpio/edgex-device-gpio-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-gpio
+  name: edgex-device-gpio
+spec:
+  ports:
+  - name: "http"
+    port: 59994
+  selector:
+    org.edgexfoundry.service: edgex-device-gpio
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-device-modbus/edgex-device-modbus-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-modbus
+  name: edgex-device-modbus
+spec:
+  ports:
+  - name: "http"
+    port: 59901
+  selector:
+    org.edgexfoundry.service: edgex-device-modbus
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-device-mqtt/edgex-device-mqtt-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-mqtt
+  name: edgex-device-mqtt
+spec:
+  ports:
+  - name: "http"
+    port: 59982
+  selector:
+    org.edgexfoundry.service: edgex-device-mqtt
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-device-onvif-camera/edgex-device-onvif-camera-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-onvif-camera
+  name: edgex-device-onvif-camera
+spec:
+  ports:
+  - name: "http"
+    port: 59984
+  selector:
+    org.edgexfoundry.service: edgex-device-onvif-camera
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-device-rest/edgex-device-rest-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-rest
+  name: edgex-device-rest
+spec:
+  ports:
+  - name: "http"
+    port: 59986
+  selector:
+    org.edgexfoundry.service: edgex-device-rest
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-device-rfid-llrp/edgex-device-rfid-llrp-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-rfid-llrp
+  name: edgex-device-rfid-llrp
+spec:
+  ports:
+  - name: "http"
+    port: 59989
+  selector:
+    org.edgexfoundry.service: edgex-device-rfid-llrp
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-device-snmp/edgex-device-snmp-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-snmp
+  name: edgex-device-snmp
+spec:
+  ports:
+  - name: "http"
+    port: 59993
+  selector:
+    org.edgexfoundry.service: edgex-device-snmp
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-device-usb-camera/edgex-device-usb-camera-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-usb-camera
+  name: edgex-device-usb-camera
+spec:
+  ports:
+  - name: "http"
+    port: 59984
+  selector:
+    org.edgexfoundry.service: edgex-device-usb-camera
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-device-virtual/edgex-device-virtual-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-virtual
+  name: edgex-device-virtual
+spec:
+  ports:
+  - name: "http"
+    port: 59900
+  selector:
+    org.edgexfoundry.service: edgex-device-virtual
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-ekuiper/edgex-ekuiper-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-kuiper
+  name: edgex-kuiper
+spec:
+  ports:
+  - name: "http"
+    port: 59720
+  selector:
+    org.edgexfoundry.service: edgex-kuiper
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-metadata/edgex-core-metadata-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-core-metadata
+  name: edgex-core-metadata
+spec:
+  ports:
+  - name: "http"
+    port: 59881
+  selector:
+    org.edgexfoundry.service: edgex-core-metadata
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-modbus-simulator/edgex-modbus-simulator-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-modbus-simulator
+  name: edgex-modbus-simulator
+spec:
+  ports:
+  - name: "mbap"
+    port: 1502
+  selector:
+    org.edgexfoundry.service: edgex-modbus-simulator
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-mqtt-broker/edgex-mqtt-broker-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-mqtt-broker
+  name: edgex-mqtt-broker
+spec:
+  ports:
+  - name: "mqtt"
+    port: 1883
+  selector:
+    org.edgexfoundry.service: edgex-mqtt-broker
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-nats-server/edgex-nats-server-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-nats-server
+  name: edgex-nats-server
+spec:
+  ports:
+  - name: "http"
+    port: 4222
+  selector:
+    org.edgexfoundry.service: edgex-nats-server
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-redis/edgex-redis-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-redis
+  name: edgex-redis
+spec:
+  ports:
+    - name: "redis"
+      port: 6379
+  selector:
+    org.edgexfoundry.service: edgex-redis
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-support-notifications/edgex-support-notifications-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-support-notifications
+  name: edgex-support-notifications
+spec:
+  ports:
+  - name: "http"
+    port: 59860
+  selector:
+    org.edgexfoundry.service: edgex-support-notifications
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-support-scheduler/edgex-support-scheduler-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-support-scheduler
+  name: edgex-support-scheduler
+spec:
+  ports:
+  - name: "http"
+    port: 59861
+  selector:
+    org.edgexfoundry.service: edgex-support-scheduler
+  type: ClusterIP
+---
+# Source: EdgeX/templates/edgex-ui/edgex-ui-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-ui
+  name: edgex-ui
+spec:
+  ports:
+  - name: "http"
+    port: 4000
+  selector:
+    org.edgexfoundry.service: edgex-ui
+  type: NodePort
+---
+# Source: EdgeX/templates/edgex-app-external-mqtt-trigger/edgex-app-external-mqtt-trigger-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-external-mqtt-trigger
+  name: edgex-app-external-mqtt-trigger
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-app-external-mqtt-trigger
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-app-external-mqtt-trigger
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-app-external-mqtt-trigger
+        image: edgexfoundry/app-service-configurable:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59706
+          name: "http"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        env:
+        - name: EDGEX_PROFILE
+          value: "external-mqtt-trigger"
+        - name: SERVICE_HOST
+          value: edgex-app-external-mqtt-trigger
+        - name: TRIGGER_EXTERNALMQTT_URL
+          value: ""
+        - name: WRITABLE_LOGLEVEL
+          value: INFO
+        - name: WRITABLE_PIPELINE_FUNCTIONS_MQTTEXPORT_PARAMETERS_BROKERADDRESS
+          value: ""
+        - name: WRITABLE_PIPELINE_FUNCTIONS_MQTTEXPORT_PARAMETERS_TOPIC
+          value: edgex-export
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59706
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59706
+      hostname: edgex-app-external-mqtt-trigger
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-app-http-export/edgex-app-http-export-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-http-export
+  name: edgex-app-http-export
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-app-http-export
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-app-http-export
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-app-http-export
+        image: edgexfoundry/app-service-configurable:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59704
+          name: "http"
+        env:
+          - name: EDGEX_PROFILE
+            value: "http-export"
+          - name: SERVICE_HOST
+            value: edgex-app-http-export
+          - name: WRITABLE_PIPELINE_FUNCTIONS_HTTPEXPORT_PARAMETERS_URL
+            value: ""
+          - name: WRITABLE_LOGLEVEL
+            value: INFO
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59704
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59704
+      hostname: edgex-app-http-export
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-app-metrics-influxdb/edgex-app-metrics-influxdb-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-rules-engine
+  name: edgex-app-metrics-influxdb
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-app-metrics-influxdb
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-app-metrics-influxdb
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-app-metrics-influxdb
+        image: edgexfoundry/app-service-configurable:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59707
+          name: "http"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        env:
+        - name: EDGEX_PROFILE
+          value: "metrics-influxdb"
+        - name: SERVICE_HOST
+          value: edgex-app-metrics-influxdb
+        - name: TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST
+          value: edgex-redis
+        - name: TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST
+          value: edgex-redis
+      
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59707
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59707
+      hostname: edgex-app-metrics-influxdb
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-app-mqtt-export/edgex-app-mqtt-export-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-mqtt-export
+  name: edgex-app-mqtt-export
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-app-mqtt-export
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-app-mqtt-export
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-app-mqtt-export
+        image: edgexfoundry/app-service-configurable:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59703
+          name: "http"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        env:
+        - name: EDGEX_PROFILE
+          value: "mqtt-export"
+        - name: SERVICE_HOST
+          value: edgex-app-mqtt-export
+        - name: WRITABLE_PIPELINE_FUNCTIONS_MQTTEXPORT_PARAMETERS_BROKERADDRESS
+          value: ""
+        - name: WRITABLE_PIPELINE_FUNCTIONS_MQTTEXPORT_PARAMETERS_TOPIC
+          value: edgex-events
+        - name: WRITABLE_LOGLEVEL
+          value: INFO
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59703
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59703
+      hostname: edgex-app-mqtt-export
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-app-record-replay/edgex-app-record-replay-deployment.yaml
+# Copyright (C) 2023 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-record-replay
+  name: edgex-app-record-replay
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-app-record-replay
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-app-record-replay
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-app-record-replay
+        image: edgexfoundry/app-record-replay:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59712
+          name: "http"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        env:
+        - name: SERVICE_HOST
+          value: edgex-app-record-replay
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59712
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59712
+      hostname: edgex-app-record-replay
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-app-rfid-llrp-inventory/edgex-app-rfid-llrp-inventory-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-rfid-llrp-inventory
+  name: edgex-app-rfid-llrp-inventory
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-app-rfid-llrp-inventory
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-app-rfid-llrp-inventory
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-app-rfid-llrp-inventory
+        image: edgexfoundry/app-rfid-llrp-inventory:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59711
+          name: "http"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        env:
+        - name: SERVICE_HOST
+          value: edgex-app-rfid-llrp-inventory
+        - name: TRIGGER_EDGEXMESSAGEBUS_PUBLISHHOST_HOST
+          value: edgex-redis
+        - name: TRIGGER_EDGEXMESSAGEBUS_SUBSCRIBEHOST_HOST
+          value: edgex-redis
+      
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59711
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59711
+        volumeMounts:
+        - mountPath: /cache
+          name: llrp-inventory-data
+      hostname: edgex-app-rfid-llrp-inventory
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+      volumes:
+      - name: llrp-inventory-data
+        persistentVolumeClaim:
+          claimName: llrp-inventory-data
+---
+# Source: EdgeX/templates/edgex-app-sample/edgex-app-sample-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-sample
+  name: edgex-app-sample
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-app-sample
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-app-sample
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-app-sample
+        image: edgexfoundry/app-service-configurable:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59700
+          name: "http"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        env:
+        - name: EDGEX_PROFILE
+          value: "sample"
+        - name: SERVICE_HOST
+          value: edgex-app-sample
+        - name: CLIENTS_CORE_DATA_HOST
+          value: edgex-core-data
+        - name: CLIENTS_CORE_COMMAND_HOST
+          value: edgex-core-command
+        - name: CLIENTS_SUPPORT-NOTIFICATIONS_HOST
+          value: edgex-support-notifications          
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59700
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59700
+      hostname: edgex-app-sample
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-appservice-rules/edgex-app-rules-engine-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-app-rules-engine
+  name: edgex-app-rules-engine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-app-rules-engine
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-app-rules-engine
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-app-rules-engine
+        image: edgexfoundry/app-service-configurable:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59701
+          name: "http"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        env:
+        - name: EDGEX_PROFILE
+          value: "rules-engine"
+        - name: SERVICE_HOST
+          value: edgex-app-rules-engine
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59701
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59701
+      hostname: edgex-app-rules-engine
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-common-config/edgex-core-common-config-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-core-common-config-bootstrapper
+  name: edgex-core-common-config-bootstrapper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-core-common-config-bootstrapper
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-core-common-config-bootstrapper
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-core-common-config-bootstrapper
+        image: edgexfoundry/core-common-config-bootstrapper:3.1.0
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: ALL_SERVICES_REGISTRY_HOST
+          value: edgex-core-consul
+        - name: ALL_SERVICES_DATABASE_HOST
+          value: edgex-redis
+        - name: APP_SERVICES_CLIENTS_CORE_METADATA_HOST
+          value: edgex-core-metadata
+        - name: DEVICE_SERVICES_CLIENTS_CORE_METADATA_HOST
+          value: edgex-core-metadata
+        - name: ALL_SERVICES_MESSAGEBUS_HOST
+          value: edgex-redis
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+      hostname: edgex-core-common-config-bootstrapper
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-consul/edgex-consul-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-core-consul
+  name: edgex-core-consul
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-core-consul
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-core-consul
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-core-consul
+        image: hashicorp/consul:1.16.2
+        imagePullPolicy: IfNotPresent
+        args: ["agent", "-ui", "-bootstrap", "-server", "-client", "0.0.0.0"]
+        ports:
+        - containerPort: 8500
+          name: "http"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          tcpSocket:
+            port: 8500
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          tcpSocket:
+            port: 8500
+        volumeMounts:
+        - mountPath: /consul/config
+          name: consul-config
+        - mountPath: /consul/data
+          name: consul-data
+
+      hostname: edgex-core-consul
+      restartPolicy: Always
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      volumes:
+      - name: consul-config
+        persistentVolumeClaim:
+          claimName: consul-config
+      - name: consul-data
+        persistentVolumeClaim:
+          claimName: consul-data
+---
+# Source: EdgeX/templates/edgex-core-command/edgex-core-command-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-core-command
+  name: edgex-core-command
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-core-command
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-core-command
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-core-command
+        image: edgexfoundry/core-command:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59882
+          name: "http"
+        env:
+        - name: SERVICE_HOST
+          value: edgex-core-command
+        - name: EXTERNALMQTT_URL
+          value: "tcp://edgex-mqtt-broker1883"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59882
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59882
+      hostname: edgex-core-command
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-core-data/edgex-core-data-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-core-data
+  name: edgex-core-data
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-core-data
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-core-data
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-core-data
+        image: edgexfoundry/core-data:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59880
+          name: "http"
+        env:
+        - name: SERVICE_HOST
+          value: edgex-core-data
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59880
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59880
+      hostname: edgex-core-data
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-device-bacnet/edgex-device-bacnet-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-bacnet
+  name: edgex-device-bacnet
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-device-bacnet
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-device-bacnet
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-device-bacnet
+        image: edgexfoundry/device-bacnet:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59980
+          name: "http"
+        env:
+          - name: SERVICE_HOST
+            value: edgex-device-bacnet
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        - configMapRef:
+            name: edgex-device-c-sdk-environment
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59980
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59980
+      hostname: edgex-device-bacnet
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-device-coap/edgex-device-coap-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-coap
+  name: edgex-device-coap
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-device-coap
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-device-coap
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-device-coap
+        image: edgexfoundry/device-coap:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59988
+          name: "http"
+        env:
+        - name: SERVICE_HOST
+          value: edgex-device-coap
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        - configMapRef:
+            name: edgex-device-c-sdk-environment
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59988
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59988
+      hostname: edgex-device-coap
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-device-gpio/edgex-device-gpio-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-gpio
+  name: edgex-device-gpio
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-device-gpio
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-device-gpio
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-device-gpio
+        image: edgexfoundry/device-gpio:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59994
+          name: "http"
+        env:
+        - name: SERVICE_HOST
+          value: edgex-device-gpio
+        - name: SERVICE_PORT
+          value: "59994"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59994
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59994
+      hostname: edgex-device-gpio
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-device-modbus/edgex-device-modbus-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-modbus
+  name: edgex-device-modbus
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-device-modbus
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-device-modbus
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-device-modbus
+        image: edgexfoundry/device-modbus:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59901
+          name: "http"
+        env:
+        - name: SERVICE_HOST
+          value: edgex-device-modbus
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59901
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59901
+      hostname: edgex-device-modbus
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-device-mqtt/edgex-device-mqtt-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-mqtt
+  name: edgex-device-mqtt
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-device-mqtt
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-device-mqtt
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-device-mqtt
+        image: edgexfoundry/device-mqtt:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59982
+          name: "http"
+        env:
+        - name: SERVICE_HOST
+          value: edgex-device-mqtt
+
+
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59982
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59982
+      hostname: edgex-device-mqtt
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-device-onvif-camera/edgex-device-onvif-camera-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-onvif-camera
+  name: edgex-device-onvif-camera
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-device-onvif-camera
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-device-onvif-camera
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-device-onvif-camera
+        image: edgexfoundry/device-onvif-camera:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59984
+          name: "http"
+        env:
+        - name: SERVICE_HOST
+          value: edgex-device-onvif-camera
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59984
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59984
+      hostname: edgex-device-onvif-camera
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-device-rest/edgex-device-rest-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-rest
+  name: edgex-device-rest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-device-rest
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-device-rest
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-device-rest
+        image: edgexfoundry/device-rest:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59986
+          name: "http"
+        env:
+        - name: SERVICE_HOST
+          value: edgex-device-rest
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59986
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59986
+      hostname: edgex-device-rest
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-device-rfid-llrp/edgex-device-rfid-llrp-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-rfid-llrp
+  name: edgex-device-rfid-llrp
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-device-rfid-llrp
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-device-rfid-llrp
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-device-rfid-llrp
+        image: edgexfoundry/device-rfid-llrp:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59989
+          name: "http"
+        env:
+        - name: SERVICE_HOST
+          value: edgex-device-rfid-llrp
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59989
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59989
+      hostname: edgex-device-rfid-llrp
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-device-snmp/edgex-device-snmp-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-snmp
+  name: edgex-device-snmp
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-device-snmp
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-device-snmp
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-device-snmp
+        image: edgexfoundry/device-snmp:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59993
+          name: "http"
+        env:
+        - name: SERVICE_HOST
+          value: edgex-device-snmp
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59993
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59993
+      hostname: edgex-device-snmp
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-device-usb-camera/edgex-device-usb-camera-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-usb-camera
+  name: edgex-device-usb-camera
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-device-usb-camera
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-device-usb-camera
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-device-usb-camera
+        image: edgexfoundry/device-usb-camera:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59983
+          name: "http"
+        env:
+        - name: SERVICE_HOST
+          value: edgex-device-usb-camera
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59983
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59983
+      hostname: edgex-device-usb-camera
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-device-virtual/edgex-device-virtual-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-device-virtual
+  name: edgex-device-virtual
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-device-virtual
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-device-virtual
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-device-virtual
+        image: edgexfoundry/device-virtual:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59900
+          name: "http"
+        env:
+        - name: SERVICE_HOST
+          value: edgex-device-virtual
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59900
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59900
+      hostname: edgex-device-virtual
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-ekuiper/edgex-ekuiper-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-kuiper
+  name: edgex-kuiper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-kuiper
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-kuiper
+    spec:
+      automountServiceAccountToken: false
+      initContainers:
+      - name: prep-volumes
+        image: lfedge/ekuiper:1.11.4-alpine
+        imagePullPolicy: IfNotPresent
+        command: [ "sh", "-c", "chown -Rh 1001:1001 /kuiper/log /kuiper/data; cp -rpd /kuiper/etc/* /mnt/kuiper-etc/; cp -rpd /kuiper/plugins/* /mnt/kuiper-plugins/; exit 0" ]
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsUser: 0
+          runAsGroup: 0
+        volumeMounts:
+          - mountPath: /kuiper/log
+            name: kuiper-log
+          - mountPath: /kuiper/data
+            name: kuiper-data
+          - mountPath: /mnt/kuiper-etc
+            name: kuiper-etc
+          - mountPath: /mnt/kuiper-plugins
+            name: kuiper-plugins
+      containers:
+      - name: edgex-kuiper
+        image: lfedge/ekuiper:1.11.4-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59720
+          name: "http"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        env:
+        # - name: KUIPER__BASIC__DEBUG
+        #   value: "true"
+        - name: KUIPER__BASIC__CONSOLELOG
+          value: "true"
+        - name: KUIPER__BASIC__RESTPORT
+          value: "59720"
+        - name: EDGEX__DEFAULT__TOPIC
+          value: edgex/rules-events
+        - name: CONNECTION__EDGEX__REDISMSGBUS__PORT
+          value: "6379"
+        - name: CONNECTION__EDGEX__REDISMSGBUS__PROTOCOL
+          value: redis
+        - name: CONNECTION__EDGEX__REDISMSGBUS__SERVER
+          value: edgex-redis
+        - name: CONNECTION__EDGEX__REDISMSGBUS__TYPE
+          value: redis
+        - name: EDGEX__DEFAULT__PORT
+          value: "6379"
+        - name: EDGEX__DEFAULT__PROTOCOL
+          value: redis
+        - name: EDGEX__DEFAULT__SERVER
+          value: edgex-redis
+        - name: EDGEX__DEFAULT__TYPE
+          value: redis
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          tcpSocket:
+            port: 59720
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          tcpSocket:
+            port: 59720
+        volumeMounts:
+          - mountPath: /kuiper/data
+            name: kuiper-data
+          - mountPath: /kuiper/etc
+            name: kuiper-etc
+          - mountPath: /kuiper/log
+            name: kuiper-log
+          - mountPath: /kuiper/plugins
+            name: kuiper-plugins
+
+      hostname: edgex-kuiper
+      restartPolicy: Always
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 1001
+      volumes:
+        - name: kuiper-data
+          persistentVolumeClaim:
+            claimName: kuiper-data
+        - name: kuiper-etc
+          persistentVolumeClaim:
+            claimName: kuiper-etc
+        - name: kuiper-log
+          persistentVolumeClaim:
+            claimName: kuiper-log
+        - name: kuiper-plugins
+          persistentVolumeClaim:
+            claimName: kuiper-plugins
+---
+# Source: EdgeX/templates/edgex-metadata/edgex-core-metadata-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-core-metadata
+  name: edgex-core-metadata
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-core-metadata
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-core-metadata
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-core-metadata
+        image: edgexfoundry/core-metadata:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59881
+          name: "http"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        env:
+        - name: SERVICE_HOST
+          value: edgex-core-metadata
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59881
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59881
+      hostname: edgex-core-metadata
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-modbus-simulator/edgex-modbus-simulator-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-modbus-simulator
+  name: edgex-modbus-simulator
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-modbus-simulator
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-modbus-simulator
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-modbus-simulator
+        image: nexus3.edgexfoundry.org:10003/edgex-devops/edgex-modbus-simulator:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 1502
+          name: "mbap"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          tcpSocket:
+            port: 1502
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          tcpSocket:
+            port: 1502
+      hostname: edgex-modbus-simulator
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-mqtt-broker/edgex-mqtt-broker-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-mqtt-broker
+  name: edgex-mqtt-broker
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-mqtt-broker
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-mqtt-broker
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-mqtt-broker
+        image: eclipse-mosquitto:2.0.18
+        imagePullPolicy: IfNotPresent
+        command: ["/usr/sbin/mosquitto", "-c", "/mosquitto-no-auth.conf"]
+        args: []
+        ports:
+        - containerPort: 1883
+          name: "mqtt"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          tcpSocket:
+            port: 1883
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          tcpSocket:
+            port: 1883
+      hostname: edgex-mqtt-broker
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-nats-server/edgex-nats-server-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-nats-server
+  name: edgex-nats-server
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-nats-server
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-nats-server
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-nats-server
+        image: nats:2.9.23-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 4222
+          name: "http"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          tcpSocket:
+            port: 4222
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          tcpSocket:
+            port: 4222
+        volumeMounts:
+        - mountPath: /tmp/nats
+          name: nats-data
+      hostname: edgex-nats-server
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+      volumes:
+      - name: nats-data
+        persistentVolumeClaim:
+          claimName: nats-data
+---
+# Source: EdgeX/templates/edgex-redis/edgex-redis-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-redis
+  name: edgex-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-redis
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-redis
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-redis
+        image: redis:7.0.14-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 6379
+          name: "redis"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          tcpSocket:
+            port: 6379
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          tcpSocket:
+            port: 6379
+        volumeMounts:
+        - mountPath: /data
+          name: db-data
+      hostname: edgex-redis
+      restartPolicy: Always
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      volumes:
+      - name: db-data
+        persistentVolumeClaim:
+          claimName: db-data
+---
+# Source: EdgeX/templates/edgex-support-notifications/edgex-support-notifications-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-support-notifications
+  name: edgex-support-notifications
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-support-notifications
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-support-notifications
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-support-notifications
+        image: edgexfoundry/support-notifications:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59860
+          name: "http"
+        env:
+        - name: SERVICE_HOST
+          value: edgex-support-notifications
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59860
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59860
+      hostname: edgex-support-notifications
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-support-scheduler/edgex-support-scheduler-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-support-scheduler
+  name: edgex-support-scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-support-scheduler
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-support-scheduler
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-support-scheduler
+        image: edgexfoundry/support-scheduler:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 59861
+          name: "http"
+        envFrom:
+        - configMapRef:
+            name: edgex-common-variables
+        env:
+        - name: SERVICE_HOST
+          value: edgex-support-scheduler
+        - name: INTERVALACTIONS_SCRUBPUSHED_HOST
+          value: edgex-core-data
+        - name: INTERVALACTIONS_SCRUBAGED_HOST
+          value: edgex-core-data
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59861
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 59861
+      hostname: edgex-support-scheduler
+      restartPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/edgex-ui/edgex-ui-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    org.edgexfoundry.service: edgex-ui
+  name: edgex-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      org.edgexfoundry.service: edgex-ui
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        org.edgexfoundry.service: edgex-ui
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: edgex-ui
+        image: edgexfoundry/edgex-ui:3.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 4000
+          name: "http"
+        env:
+        - name: EDGEX_SECURITY_SECRET_STORE
+          value: "false"
+        - name: SERVICE_SERVERBINDADDR
+          value: "0.0.0.0"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 4000
+          periodSeconds: 1
+          failureThreshold: 120
+        livenessProbe:
+          httpGet:
+            path: /api/v3/ping
+            port: 4000
+      hostname: edgex-ui
+      restartPolicy: Always
+      securityContext:
+        runAsUser: 2002
+        runAsGroup: 2001
+---
+# Source: EdgeX/templates/custom-config/devices/my.device.yaml
+apiVersion: v1
+deviceList:
+  name: "my-custom-device"
+  profileName: "my-custom-device-profile"
+  description: "MQTT device is created for test purpose"
+  labels: 
+    - "MQTT"
+    - "test"
+  protocols:
+    mqtt:
+       CommandTopic: "command/my-custom-device"
+  autoEvents:
+   interval: "5"
+   onChange: false
+   sourceName: "message"
+---
+# Source: EdgeX/templates/custom-config/profiles/my.profile.yaml
+apiVersion: v1
+name: "my-custom-device-profile"
+manufacturer: "iot"
+model: "MQTT-DEVICE"
+description: "Test device profile"
+labels:
+  - "mqtt"
+  - "test"
+deviceResources:
+  - name: randnum
+    isHidden: true
+    description: "device random number"
+    properties:
+      valueType: "Float32"
+      readWrite: "R"
+  - name: ping
+    isHidden: true
+    description: "device awake"
+    properties:
+      valueType: "String"
+      readWrite: "R"
+  - name: message
+    isHidden: false
+    description: "device message"
+    properties:
+      valueType: "String"
+      readWrite: "RW"
+  - name: json
+    isHidden: false
+    description: "JSON message"
+    properties:
+      valueType: "Object"
+      readWrite: "RW"
+      mediaType: "application/json"
+deviceCommands:
+  - name: values
+    readWrite: "R"
+    isHidden: false
+    resourceOperations:
+        - { deviceResource: "randnum" }
+        - { deviceResource: "ping" }
+        - { deviceResource: "message" }
+---
+# Source: EdgeX/templates/edgex-consul/edgex-consul-ingress.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-core-command/edgex-core-command-ingress.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-core-data/edgex-core-data-ingress.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-device-virtual/edgex-device-virtual-ingress.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-ekuiper/edgex-ekuiper-ingress.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-metadata/edgex-core-metadata-ingress.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-pv-secure.yaml
+# Copyright (C) 2023 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-pvc-secure.yaml
+# Copyright (C) 2023 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-security-bootstrapper/edgex-security-bootstrapper-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-security-bootstrapper/edgex-security-bootstrapper-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-security-secretstore-setup/edgex-security-secretstore-setup-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-security-secretstore-setup/edgex-security-secretstore-setup-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-support-notifications/edgex-support-notifications-ingress.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-support-scheduler/edgex-support-scheduler-ingress.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-vault/edgex-vault-deployment.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-vault/edgex-vault-ingress.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+# Source: EdgeX/templates/edgex-vault/edgex-vault-service.yaml
+# Copyright (C) 2022 Intel Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
