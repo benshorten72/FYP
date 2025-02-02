@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: app-load-balancer
+  name: app-load-balancer
+  namespace: default
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+    name: http
+  - port: 1883
+    targetPort: 1883
+    protocol: TCP
+    name: mqtt
+  selector:
+    org.edgexfoundry.service: edgex-mqtt-broker
+  type: LoadBalancer
