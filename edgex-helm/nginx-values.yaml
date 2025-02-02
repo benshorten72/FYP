@@ -1,5 +1,0 @@
-tcp:
-  1883: "default/mqtt-service:1883"  # Maps port 1883 to the MQTT service
-  8883: "default/mqtt-service:8883" # Maps port 8883 to the MQTT service for TLS
-│                                                                                                                                                             │
-│                                                                                              

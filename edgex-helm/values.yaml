@@ -338,7 +338,7 @@ edgex:
     redis: 1
     ekuiper: 1
     modbussimulator: 0
-    mqttbroker: 0
+    mqttbroker: 1
     natsserver: 0
 
   # UID/GID for container user
