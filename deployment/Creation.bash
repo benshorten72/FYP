@@ -50,7 +50,7 @@ echo "Creating docker subnet 172.100.0.0/16 for testbed"
 docker network create --subnet 172.100.0.0/16 testbed
 
 echo "Using k3d to create cluster - disabling inbuilt loadbalancer and using testbed network"
-k3d cluster create $cluster_name --k3s-arg "--disable=servicelb@server:0" --no-lb --wait --network testbed
+k3d cluster create $cluster_name --k3s-arg "--disable=servicelb@server:0" --no-lb --wait --network testbed --k3s-arg "--disable=traefik"
 
 kubectl config use-context k3d-$cluster_name
 
@@ -97,21 +97,9 @@ SERVICE_NAME="app-load-balancer"
 TIMEOUT=300  # Timeout in seconds (5 minutes)
 INTERVAL=5   # Check interval in seconds
 
-echo "Waiting for external IP to be assigned to service: $SERVICE_NAME..."
-
-end=$((SECONDS+$TIMEOUT))
-while [ $SECONDS -lt $end ]; do
-  EXTERNAL_IP=$(kubectl get svc $SERVICE_NAME -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-  if [ -n "$EXTERNAL_IP" ]; then
-    echo "External IP assigned: $EXTERNAL_IP"
-    exit 0
-  fi
-  echo "Waiting for external IP... (Retrying in $INTERVAL seconds)"
-  sleep $INTERVAL
-done
-
-echo "Timeout reached. External IP not assigned to service: $SERVICE_NAME"
-exit 1
-
-
+EXTERNAL_IP=$(kubectl get svc $SERVICE_NAME -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+echo "External IP assigned: $EXTERNAL_IP"
 echo "Ingress ready on http://$cluster_name.local"
+
+helm install resource-constrained-ai AI-helm/
+
