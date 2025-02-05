@@ -38,11 +38,11 @@ spec:
           service:
             name: edgex-consul
             port:
-              number: 8500
-      - path: /
-        pathType: Prefix
+              number: 30614
+      - path: /kuiper(/|$)(.*)
+        pathType: ImplementationSpecific
         backend:
           service:
-            name: edgex-ui
+            name: edgex-kuiper
             port:
-              number: 4000
+              number: 59720

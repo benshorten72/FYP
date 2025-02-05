@@ -93,10 +93,25 @@ echo "Add $INGRESS_LB_IP to /etc/hosts"
 echo "$INGRESS_LB_IP $cluster_name.local" | sudo tee -a /etc/hosts
 
 helm install edgex edgex-helm/
+SERVICE_NAME="app-load-balancer"
+TIMEOUT=300  # Timeout in seconds (5 minutes)
+INTERVAL=5   # Check interval in seconds
+
+echo "Waiting for external IP to be assigned to service: $SERVICE_NAME..."
+
+end=$((SECONDS+$TIMEOUT))
+while [ $SECONDS -lt $end ]; do
+  EXTERNAL_IP=$(kubectl get svc $SERVICE_NAME -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+  if [ -n "$EXTERNAL_IP" ]; then
+    echo "External IP assigned: $EXTERNAL_IP"
+    exit 0
+  fi
+  echo "Waiting for external IP... (Retrying in $INTERVAL seconds)"
+  sleep $INTERVAL
+done
+
+echo "Timeout reached. External IP not assigned to service: $SERVICE_NAME"
+exit 1
+
 
 echo "Ingress ready on http://$cluster_name.local"
-
-# git clone https://github.com/edgexfoundry/edgex-helm.git
-# git checkout v3.0
-# kubectl create namespace edgex
-# helm install edgex-napa -n default edgex-helm
