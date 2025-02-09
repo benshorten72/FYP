@@ -1,9 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "resource-constrained-ai.fullname" . }}
+  name: {{ .Values.service.name }}
   labels:
-    {{- include "resource-constrained-ai.labels" . | nindent 4 }}
+    app: {{ .Values.service.name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -12,4 +15,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "resource-constrained-ai.selectorLabels" . | nindent 4 }}
+    app: {{ .Values.service.name }}

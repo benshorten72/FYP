@@ -5,10 +5,20 @@ image:
   tag: latest
   pullPolicy: Always
 
+clusterName: ai
+isCentralAI: False
+deployment:
+  name: ai
+container:
+  name: ai
+
+resultEndPoint: test.com
+
 service:
+  name: ai
   type: ClusterIP
   port: 5000
-
+replicaCount: 1
 resources:
   limits:
     cpu: "1"

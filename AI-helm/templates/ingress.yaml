@@ -1,0 +1,22 @@
+{{- if .Values.isCentralAI }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.service.name }}
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: control.local
+    http:
+      paths:
+      - path: /{{ .Values.clusterName }}/central-ai(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: {{ .Values.service.name }}
+            port:
+              number: 5000
+{{- end }}
