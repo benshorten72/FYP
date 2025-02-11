@@ -13,5 +13,3 @@ helm install fy ../AI-helm/ \
   --set resultEndPoint=$cluster_name \
   --set clusterName=$cluster_name \
   --set isCentralAI=True \
-
-echo ""

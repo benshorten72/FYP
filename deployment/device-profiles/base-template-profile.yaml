@@ -1,0 +1,23 @@
+name: "Generic-MQTT-String-Float-Device"
+description: "Generic device profile for MQTT string and float data"
+manufacturer: "UCC"
+model: "MQTT-String-Float-Model"
+labels:
+  - "MQTT"
+  - "String"
+  - "Float"
+deviceResources:
+  - name: "StringData"
+    description: "String data from MQTT"
+    attributes:
+      type: "String"
+    properties:
+      valueType: "String"
+      readWrite: "R"
+  - name: "FloatData"
+    description: "Float data from MQTT"
+    attributes:
+      type: "Float"
+    properties:
+      valueType: "Float"
+      readWrite: "R"

@@ -313,19 +313,19 @@ edgex:
       scheduler: 1
     appservice:
       rules: 1
-      mqttexport: 0
+      mqttexport: 1
       httpexport: 0
       appsample: 0
       apprecordreplay: 0
       metricsinfluxdb: 0
       rfidllrpinventory: 0
-      externalmqtttrigger: 0
+      externalmqtttrigger: 1
     device:
-      virtual: 1
+      virtual: 0
       rest: 1
       usbcamera: 0
       onvifcamera: 0
-      mqtt: 0
+      mqtt: 1
       modbus: 0
       bacnet: 0
       coap: 0
@@ -661,7 +661,7 @@ edgex:
     # Available messagebus options: redis|mqtt|nats
     messagebusbackend: redis
     # MQTT broker address
-    mqttBrokerAddress: ""
+    mqttBrokerAddress: "edgex-mqtt-broker"
     # Writable pipeline functions HTTP export parameter URL
     httpExportURL: ""
     enableHostPort: false

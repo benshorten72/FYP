@@ -1,0 +1,20 @@
+{
+    "apiVersion": "v3",
+    "device": {
+      "name": "Sensor1",
+      "description": "A test sensor device",
+      "adminState": "UNLOCKED",
+      "operatingState": "UP",
+      "protocols": {
+        "mqtt": {
+          "host": "172.100.150.5",
+          "port": "1883",
+          "topic": "xcx/data"
+        }
+      },
+      "labels": ["MQTT", "sensor"],
+      "profileName": "Generic-MQTT-String-Float-Device",
+      "serviceName": "edgex-device-mqtt"
+    }
+  }
+  
