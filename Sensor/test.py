@@ -8,7 +8,7 @@ column_name =os.getenv("COLUMN_NAME")
 file_name =os.getenv("FILE_NAME")
 broker =os.getenv("MQTT_IP")
 
-csv_file = "./data/"+file_name
+csv_file = f"./{column_name}/"+file_name
 port = 1883
 topic = cluster_name+"/data"
 

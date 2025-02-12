@@ -80,3 +80,42 @@ helm install $cluster_name-$sanitized ../Sensor/ \
   --set env[2].value=$filename \
   --set env[3].name=MQTT_IP \
   --set env[3].value=$EXTERNAL_IP
+
+# Define bash variables
+HOST="$EXTERNAL_IP"
+PORT="1883"
+TOPIC="$cluster_name/$column"
+COMMAND_TOPIC="test"
+
+# Create the JSON string with embedded variables
+JSON=$(cat <<EOF
+[
+  {
+    "apiVersion": "v3",
+    "device": {
+      "name": "$column",
+      "description": "A test sensor device",
+      "adminState": "UNLOCKED",
+      "operatingState": "UP",
+      "protocols": {
+        "mqtt": {
+          "host": "$HOST",
+          "port": "$PORT",
+          "topic": "$TOPIC",
+          "CommandTopic": "$COMMAND_TOPIC"
+        }
+      },
+      "labels": ["MQTT", "sensor"],
+      "profileName": "Generic-MQTT-String-Float-Device",
+      "serviceName": "device-mqtt"
+    }
+  }
+]
+EOF
+)
+
+# Write the JSON string to a file
+echo "Associating device with Generic-MQTT-String-Float-Device profile on EdgeX MQTT"
+echo "$JSON" > device-profiles/generic-device.json
+curl -X POST -H "Content-Type: application/json" -d @./device-profiles/generic-device.json http://$cluster_name.local/core-metadata/api/v3/device
+echo "Sensor deployed and assoicated with edge cluster MQTT device service"
