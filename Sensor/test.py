@@ -8,9 +8,9 @@ column_name =os.getenv("COLUMN_NAME")
 file_name =os.getenv("FILE_NAME")
 broker =os.getenv("MQTT_IP")
 
-csv_file = f"./{column_name}/"+file_name
+csv_file = "./data/"+file_name
 port = 1883
-topic = cluster_name+"/data"
+topic = cluster_name+"/"+column_name
 
 df = pd.read_csv(csv_file)
 
@@ -21,15 +21,9 @@ client = mqtt.Client()
 
 client.connect(broker, port, 60)
 
-for data in column_data:
-    client.publish(topic, data)
-    print("Publishing topic",topic,"of data",data,"to",broker)
-    sleep(50)
-for data in column_data:
-    client.publish(topic, data)
-    print("Publishing topic",topic,"of data",data,"to",broker)
-    sleep(50)
-for data in column_data:
-    client.publish(topic, data)
-    print("Publishing topic",topic,"of data",data,"to",broker)
-    sleep(50)
+while True:
+    for data in column_data:
+        client.publish(topic, data)
+        print("Publishing topic",topic,"of data",data,"to",broker)
+        sleep(5)
+    print("Reach end, looping")

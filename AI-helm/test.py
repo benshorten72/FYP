@@ -8,7 +8,7 @@ import os
 
 CLUSTER_NAME =os.getenv("CLUSTER_NAME")
 INTERVAL = 8 # Maybe env var
-COLUMNS = ["sighting_date"] # env var 
+COLUMNS = ["sighting_date","location"] # env var 
 BUFFER_SIZE = 10 # Env var 
 
 URL = f"http://{CLUSTER_NAME}.local/core-metadata/api/v3/device/profile/name/Generic-MQTT-String-Float-Device"
@@ -36,7 +36,6 @@ def mqtt_thread():
     client.on_message = on_message
     client.connect("edgex-mqtt-broker", 1883, 60)
     client.loop_start()
-
 class Listener:
     def __init__(self, topic, name):
         self.topic = topic
@@ -48,6 +47,9 @@ class Listener:
         incoming_data[self.name] = data
         print(f"Received from {self.name}: {data}")
 
+    def unsubscribe(self):
+        client.unsubscribe(self.topic)
+
 
 
 sensors ={}
@@ -56,29 +58,56 @@ sensors ={}
 # 1. Get all devices periodcally
 # 2. Create new mqtt subscriber for devices if it doesnt exist
 # 3. Create a buffer to recieve and compile data within interval into example
-
 def fetch_devices():
     try:
         response = requests.get(URL)
-        response.raise_for_status() 
+        response.raise_for_status()  # Raise an exception for HTTP errors
         devices = response.json()
+
+        # Check if "devices" key exists and is not empty
+        if "devices" not in devices or not devices["devices"]:
+            print(f"No devices detected in EdgeX MQTT service: {URL}")
+            return
+        devices_present = []
         for device in devices["devices"]:
-            device_name = device["name"]
-        profile_name = device["profileName"]
-        topic = device["protocols"]["mqtt"]["topic"]  # Extract the MQTT topic
+            device_name = device.get("name")
+            profile_name = device.get("profileName")
+            topic = device.get("protocols", {}).get("mqtt", {}).get("topic")
+            devices_present.append(device_name)
+            # Check if required fields are present
+            if not all([device_name, profile_name, topic]):
+                print(f"Skipping device due to missing fields: {device}")
+                continue
 
-        print(f"Device Name: {device_name}")
-        print(f"Profile Name: {profile_name}")
-        print(f"MQTT Topic: {topic}")
+            print(f" - Device Name: {device_name}")
+            print(f" - Profile Name: {profile_name}")
+            print(f" - MQTT Topic: {topic}\n")
+            # Check if device_name is in COLUMNS and not already in sensors
+            if device_name in COLUMNS: 
+                if device_name not in sensors:
+                    print(f"Adding new listener for device: {device_name}")
+                    listen = Listener(topic, device_name)
+                    listeners.append(listen)
+                    sensors[device_name] = listen
+            else:
+                print(f"{device_name} is not apart of list of predefined data names/columns: {COLUMNS}")
+                
 
-        # Check if data name (profile_name) is in column list
-        if device_name in COLUMNS and device_name not in sensors.keys():
-            print("This works")
-            listeners.append(Listener(topic,device_name))     
-            sensors[device_name] = listeners
-        print("-" * 40)
+            
+        # Handle incoming data after processing devices
         handle_incoming_data()
         print(f"Buffer has been updated to contain: {data_buffer}")
+        # Unsubscribe from devices not associated with device profile
+        if len(sensors.keys()) > 0:
+            for sensor_name in list(sensors.keys()):
+                if sensor_name not in devices_present:
+                    for listener in sensors[sensor_name]:
+                        listener.unsubscribe()
+                        listeners.remove(listener) 
+                    del sensors[sensor_name]
+                    print(f"Removed sensor: {sensor_name} as is no longer associatd with device profile")
+        print("-" * 40)
+
     except requests.exceptions.RequestException as e:
         print(f"Error fetching devices: {e}")
 

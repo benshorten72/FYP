@@ -1,6 +1,5 @@
 #!/bin/bash
 echo "Installing split model on edge"
-cluster_name="xcx"
 kubectl create configmap $cluster_name-python --from-file=../AI-helm/test.py
 
 helm install ai-model ../AI-helm \
@@ -10,7 +9,25 @@ helm install ai-model ../AI-helm \
   --set env[0].name=CLUSTER_NAME \
   --set env[0].value=$cluster_name \
 
+while true; do
+    response=$(curl -X POST -H "Content-Type: application/json" -d @./device-profiles/base-template-profile.json -s -o /dev/null -w "%{http_code}" http://$cluster_name.local/core-metadata/api/v3/deviceprofile)
+    
+    if [ "$response" -eq 201 ]; then
+        echo "Received incorrect response : $response, Retrying..."
 
+    elif [ "$response" -eq 409 ]; then
+        echo "Profile already exists, not issue, continuing..."
+        break
+    elif [ "$response" -eq 207 ]; then
+        echo "Profile already exists, not issue, continuing..."
+        break
+    else
+        echo "Received response code: $response. Retrying loop"
+    fi
+    
+    sleep 2
+done
+echo "Sensors can now communicate with cluster"
 
 # echo "Installing split model on control"
 # kubectl config use-context k3d-control
