@@ -1,29 +1,53 @@
 from random import randint
 from time import sleep
+from typing import List
 import paho.mqtt.client as mqtt
 from flask import Flask, request
 import threading
 import requests
 import os
+requests.packages.urllib3.util.connection.HAS_IPV6 = False
 
 CLUSTER_NAME =os.getenv("CLUSTER_NAME")
+CLUSTER_RANK =os.getenv("CLUSTER_RANK")
+
 INTERVAL = 8 # Maybe env var
 COLUMNS = ["sighting_date","location"] # env var 
 BUFFER_SIZE = 10 # Env var 
 
-URL = f"http://{CLUSTER_NAME}.local/core-metadata/api/v3/device/profile/name/Generic-MQTT-String-Float-Device"
-
+PROFILE_URL = f"http://{CLUSTER_NAME}.local/core-metadata/api/v3/device/profile/name/Generic-MQTT-String-Float-Device"
+CONTROL_URL = "http://control.local"
 data_lock = threading.Lock()
 # Incoming data added to buffer and is reset on interval
 incoming_data = {}
 listeners = []
 data_buffer = []
 client = mqtt.Client()
-
+clusters = {}
 
 for i in COLUMNS:
     incoming_data[i]=None
+
+def get_clusters():
     
+    try:
+        response = requests.get(CONTROL_URL+"/control/get_clusters")
+        response.raise_for_status() 
+        data = response.json()
+        print("Response JSON:", data)
+    except requests.exceptions.HTTPError as http_err:
+        print(f"HTTP error occurred: {http_err}")
+        return
+    
+    if "clusters" in data:
+        clusters={}
+        # Add each cluster to the dictionary
+        for cluster in data["clusters"]:
+            name = cluster["name"]
+            rank = cluster["rank"]
+            if name != CLUSTER_NAME:
+                clusters[name] = rank
+
 def mqtt_thread():
     def on_message(client, userdata, message):
         print(f"Received data on topic: {message.topic}")
@@ -60,13 +84,15 @@ sensors ={}
 # 3. Create a buffer to recieve and compile data within interval into example
 def fetch_devices():
     try:
-        response = requests.get(URL)
+        #Fetch clusters
+        get_clusters()
+
+        response = requests.get(PROFILE_URL)
         response.raise_for_status()  # Raise an exception for HTTP errors
         devices = response.json()
-
         # Check if "devices" key exists and is not empty
         if "devices" not in devices or not devices["devices"]:
-            print(f"No devices detected in EdgeX MQTT service: {URL}")
+            print(f"No devices detected in EdgeX MQTT service: {PROFILE_URL}")
             return
         devices_present = []
         for device in devices["devices"]:
@@ -91,9 +117,7 @@ def fetch_devices():
                     sensors[device_name] = listen
             else:
                 print(f"{device_name} is not apart of list of predefined data names/columns: {COLUMNS}")
-                
 
-            
         # Handle incoming data after processing devices
         handle_incoming_data()
         print(f"Buffer has been updated to contain: {data_buffer}")
@@ -129,6 +153,27 @@ def handle_incoming_data():
 thread = threading.Thread(target=mqtt_thread)
 thread.daemon = True 
 thread.start()
+# ---------------------------------------
+
+def get_buffers():
+    buffers={}
+    if clusters:
+        for cluster in clusters:
+            if clusters[cluster] < CLUSTER_RANK:
+                response = requests.get(CONTROL_URL+"/get_buffer")
+                response.raise_for_status() 
+                data = response.json()
+                
+    else:
+        print("No other clusters avalible")
+        return buffers
+
+def make_space():
+    buffers = get_buffers()
+    if buffers:
+        return 
+    else:
+        print("No buffers avalible")
 if __name__ == "__main__":
     while True:
         fetch_devices()

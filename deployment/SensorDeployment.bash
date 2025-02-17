@@ -117,5 +117,5 @@ EOF
 # Write the JSON string to a file
 echo "Associating device with Generic-MQTT-String-Float-Device profile on EdgeX MQTT"
 echo "$JSON" > device-profiles/generic-device.json
-curl -X POST -H "Content-Type: application/json" -d @./device-profiles/generic-device.json http://$cluster_name.local/core-metadata/api/v3/device
+curl -4 -X POST -H "Content-Type: application/json" -d @./device-profiles/generic-device.json http://$cluster_name.local/core-metadata/api/v3/device
 echo "Sensor deployed and assoicated with edge cluster MQTT device service"

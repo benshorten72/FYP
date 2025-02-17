@@ -45,6 +45,10 @@ while true; do
   fi
 done
 
+if [[ -z "${cluster_rank}" ]]; then
+    read -p "Enter the cluster rank for scheduling: " cluster_rank
+fi
+export cluster_rank
 # Output the provided range
 echo "You have defined the IP range as 172.100.150.$ip_start_range-172.100.150.$ip_end_range"
 
@@ -87,7 +91,8 @@ spec:
 EOF
 
 # Install the ingress-nginx Helm chart
-helm install ingress-nginx ../ingress-nginx/ -n ingress-nginx --create-namespace --set clusterName=$cluster_name
+kubectl edit validatingwebhookconfiguration ingress-nginx-admission
+helm install ingress-nginx ../ingress-nginx/ -n ingress-nginx --create-namespace --set clusterName=$cluster_name --set controller.admissionWebhooks.enabled=false
 
 INGRESS_LB_IP=$(kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 echo "Add $INGRESS_LB_IP to /etc/hosts"

@@ -33,5 +33,5 @@ sanitized=$(echo "$column" | tr -cd 'a-z0-9.-' | sed -E 's/^[^a-z0-9]*//;s/[^a-z
 kubectl delete cm $cluster_name-$sanitized
 # Ensure the sanitized string starts and ends with an alphanumeric character
 sanitized=$(echo "$sanitized" | sed -E 's/^[^a-z0-9]*//;s/[^a-z0-9]*$//')
-curl -X DELETE -H "Content-Type: application/json"  http://$cluster_name.local/core-metadata/api/v3/device/name/$column
+curl -4 -X DELETE -H "Content-Type: application/json"  http://$cluster_name.local/core-metadata/api/v3/device/name/$column
 helm uninstall $cluster_name-$sanitized

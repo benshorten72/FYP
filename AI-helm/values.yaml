@@ -36,3 +36,5 @@ affinity: {}
 env:
   - name: CLUSTER_NAME
     value: ""
+  - name: CLUSTER_RANK
+    value: 1

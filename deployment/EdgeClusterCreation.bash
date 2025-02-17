@@ -6,4 +6,11 @@ SERVICE_NAME="app-load-balancer"
 EXTERNAL_IP=$(kubectl get svc $SERVICE_NAME -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 echo "External IP assigned: $EXTERNAL_IP"
 echo "Ingress ready on http://$cluster_name.local"
+
+echo -e "Enter the cluster rank to be used for schedueling:"
+read -p "" cluster_name
 ./DeployModels.bash
+
+curl -4 -X POST http://control.local/control/add_cluster \
+-H "Content-Type: application/json" \
+-d '{"name": "$cluster_name", "rank": $rank}'

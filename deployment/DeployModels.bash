@@ -8,9 +8,11 @@ helm install ai-model ../AI-helm \
   --set configmapName=$cluster_name-python \
   --set env[0].name=CLUSTER_NAME \
   --set env[0].value=$cluster_name \
+  --set env[0].name=CLUSTER_RANK \
+  --set env[0].value=$cluster_rank \
 
 while true; do
-    response=$(curl -X POST -H "Content-Type: application/json" -d @./device-profiles/base-template-profile.json -s -o /dev/null -w "%{http_code}" http://$cluster_name.local/core-metadata/api/v3/deviceprofile)
+    response=$(curl -4 -X POST -H "Content-Type: application/json" -d @./device-profiles/base-template-profile.json -s -o /dev/null -w "%{http_code}" http://$cluster_name.local/core-metadata/api/v3/deviceprofile)
     
     if [ "$response" -eq 201 ]; then
         echo "Received incorrect response : $response, Retrying..."

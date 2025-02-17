@@ -1,0 +1,24 @@
+replicaCount: 1
+
+image:
+  repository: pidgeot72/resource-constrainted-ai
+  tag: latest
+  pullPolicy: Always
+
+clusterName: control
+deployment:
+  name: control
+container:
+  name: control
+
+resultEndPoint: test.com
+configmapName: control-python
+service:
+  name: control
+  type: ClusterIP
+  port: 5001
+replicaCount: 1
+
+env:
+  - name: CLUSTER_NAME
+    value: ""
