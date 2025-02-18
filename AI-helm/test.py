@@ -24,29 +24,27 @@ listeners = []
 data_buffer = []
 client = mqtt.Client()
 clusters = {}
+sensors ={}
 
 for i in COLUMNS:
     incoming_data[i]=None
-
 def get_clusters():
-    
     try:
-        response = requests.get(CONTROL_URL+"/control/get_clusters")
-        response.raise_for_status() 
+        response = requests.get(CONTROL_URL + "/control/get_clusters")
+        response.raise_for_status()
         data = response.json()
         print("Response JSON:", data)
     except requests.exceptions.HTTPError as http_err:
         print(f"HTTP error occurred: {http_err}")
         return
-    
+
     if "clusters" in data:
-        clusters={}
-        # Add each cluster to the dictionary
-        for cluster in data["clusters"]:
-            name = cluster["name"]
-            rank = cluster["rank"]
+        clusters.clear()
+        # Iterate over the dictionary items (key-value pairs)
+        for name, rank in data["clusters"].items():
             if name != CLUSTER_NAME:
                 clusters[name] = rank
+
 
 def mqtt_thread():
     def on_message(client, userdata, message):
@@ -73,11 +71,6 @@ class Listener:
 
     def unsubscribe(self):
         client.unsubscribe(self.topic)
-
-
-
-sensors ={}
-
 # I need to now
 # 1. Get all devices periodcally
 # 2. Create new mqtt subscriber for devices if it doesnt exist
@@ -86,7 +79,8 @@ def fetch_devices():
     try:
         #Fetch clusters
         get_clusters()
-
+        print(f"Clusters:{clusters}")
+        print(f"Fetching devices on{PROFILE_URL}")
         response = requests.get(PROFILE_URL)
         response.raise_for_status()  # Raise an exception for HTTP errors
         devices = response.json()

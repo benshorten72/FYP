@@ -2,15 +2,15 @@
   {
     "apiVersion": "v3",
     "device": {
-      "name": "sighting_date",
+      "name": "location",
       "description": "A test sensor device",
       "adminState": "UNLOCKED",
       "operatingState": "UP",
       "protocols": {
         "mqtt": {
-          "host": "172.100.150.6",
+          "host": "172.100.150.4",
           "port": "1883",
-          "topic": "xcx/sighting_date",
+          "topic": "ana/location",
           "CommandTopic": "test"
         }
       },
