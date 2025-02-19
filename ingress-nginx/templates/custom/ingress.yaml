@@ -46,10 +46,3 @@ spec:
             name: edgex-kuiper
             port:
               number: 59720
-      - path: /ai(/|$)(.*)
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: resource-constrained-ai
-            port:
-              number: 5000

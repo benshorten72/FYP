@@ -2,15 +2,15 @@
   {
     "apiVersion": "v3",
     "device": {
-      "name": "location",
+      "name": "clamt",
       "description": "A test sensor device",
       "adminState": "UNLOCKED",
       "operatingState": "UP",
       "protocols": {
         "mqtt": {
-          "host": "172.100.150.4",
+          "host": "172.100.150.5",
           "port": "1883",
-          "topic": "ana/location",
+          "topic": "aether/clamt",
           "CommandTopic": "test"
         }
       },

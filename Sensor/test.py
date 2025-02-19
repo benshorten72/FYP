@@ -25,5 +25,5 @@ while True:
     for data in column_data:
         client.publish(topic, data)
         print("Publishing topic",topic,"of data",data,"to",broker)
-        sleep(5)
+        sleep(2)
     print("Reach end, looping")

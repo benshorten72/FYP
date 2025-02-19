@@ -309,20 +309,20 @@ edgex:
       data: 1
       metadata: 1
     support:
-      notifications: 1
-      scheduler: 1
+      notifications: 0
+      scheduler: 0
     appservice:
       rules: 1
-      mqttexport: 1
+      mqttexport: 0
       httpexport: 0
       appsample: 0
       apprecordreplay: 0
       metricsinfluxdb: 0
       rfidllrpinventory: 0
-      externalmqtttrigger: 1
+      externalmqtttrigger: 0
     device:
       virtual: 0
-      rest: 1
+      rest: 0
       usbcamera: 0
       onvifcamera: 0
       mqtt: 1
@@ -332,7 +332,7 @@ edgex:
       snmp: 0
       rfidllrp: 0
       gpio: 0
-    ui: 1
+    ui: 0
     system: 1
     consul: 1
     redis: 1

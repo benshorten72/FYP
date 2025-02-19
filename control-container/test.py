@@ -22,7 +22,7 @@ def add_cluster():
 def get_clusters():
     return jsonify({"clusters": cluster_list}), 200
 
-@app.route('/delete_cluster', methods=['DELETE'])
+@app.route('/delete_cluster', methods=['POST'])
 def delete_cluster():
     data = request.get_json()
     name = data.get('name')

@@ -1,4 +1,8 @@
 #!/bin/bash
+
+#This is for deleting a specific sensor on an edge cluster. The edge cluster deletion will remove
+# all sensors associated with it if ran
+
 # I need to delete the sensor on the control, the reference of it on the mqtt device service cluster
 validate_input() {
   local input="$1"
