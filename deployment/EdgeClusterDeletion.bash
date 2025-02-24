@@ -31,7 +31,7 @@ done
 echo "Deassociating it with control cluster"
 curl -4 -X POST http://control.local/control/delete_cluster \
 -H "Content-Type: application/json" \
--d "{\"name\": \"$cluster_name\""
+-d "{\"name\": \"$cluster_name\"}"
 
 echo "Deleting cluster"
 k3d cluster delete $cluster_name

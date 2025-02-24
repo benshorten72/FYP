@@ -6,17 +6,22 @@ from flask import Flask, request, jsonify
 import threading
 import requests
 import os
+import numpy as np
+from ai_edge_litert.interpreter import Interpreter
+
 requests.packages.urllib3.util.connection.HAS_IPV6 = False
 
 CLUSTER_NAME =os.getenv("CLUSTER_NAME")
 CLUSTER_RANK =os.getenv("CLUSTER_RANK")
 
 INTERVAL = 3 # Maybe env var
-COLUMNS = ["sighting_date","location"] # env var 
+COLUMNS = ["ind","indt","temp","indw","wetb","dewpt","vappr","rhum","msl","indm","wdsp","indwd","wddir","ww","w","sun","vis","clht","clamt"] # env var 
 BUFFER_SIZE = 10 # Env var 
-
+RAIN_THRESHOLD = 0.5
+MODEL_PATH = "/app/model/model.tflite"
 PROFILE_URL = f"http://{CLUSTER_NAME}.local/core-metadata/api/v3/device/profile/name/Generic-MQTT-String-Float-Device"
 CONTROL_URL = "http://control.local"
+CONTROL_AI_URL = CONTROL_URL+f"/{CLUSTER_NAME}"
 data_lock = threading.Lock()
 # Incoming data added to buffer and is reset on interval
 incoming_data = {}
@@ -113,6 +118,16 @@ def fetch_devices():
                 print(f"{device_name} is not apart of list of predefined data names/columns: {COLUMNS}")
 
         # Handle incoming data after processing devices
+
+
+        # Print columns that are not being listened for
+        unlistened_columns = [col for col in COLUMNS if col not in sensors]
+        if unlistened_columns:
+            print(f"Columns not being listened for: {unlistened_columns}")
+        else:
+            print("All columns are being listened for.")
+        print(f"All columns are being listened for???.{unlistened_columns}")
+
         handle_incoming_data()
         print(f"Buffer has been updated to contain: {data_buffer}")
         # Unsubscribe from devices not associated with device profile
@@ -258,6 +273,56 @@ def make_space(partioned_data):
         print(f"Candidates to send extra data {candidates_to_send_data} \n Sending...")
     else:
         print("No buffers avalible")
+
+# ------------------------------------------------------------------------------------------------------------------------
+# AI
+interpreter = Interpreter(model_path=MODEL_PATH)
+signatures = interpreter.get_signature_list()
+interpreter.allocate_tensors()
+
+# GET THE OUTPUT DATA
+interpreter.invoke()
+output_details = interpreter.get_output_details()
+output_data = interpreter.get_tensor(output_details[0]['index'])
+
+def inference():
+    global data_buffer
+    unprocessed_input_data = None
+    print("doing inference")
+
+    while True:
+        print("doing inference")
+        unprocessed_input_data = None
+        with data_lock:
+            if data_buffer:
+                unprocessed_input_data=data_buffer.pop(0)
+                del unprocessed_input_data["rank"]
+                raw = list(unprocessed_input_data.values())
+        #Check if its been set
+        if unprocessed_input_data:
+            # FEED IN THE INPUT DATA
+            input_details = interpreter.get_input_details()
+            input_data = np.array([raw], dtype=np.float32)
+            interpreter.set_tensor(input_details[0]['index'], input_data)
+            interpreter.invoke()
+            output_details = interpreter.get_output_details()
+            output_data = interpreter.get_tensor(output_details[0]['index'])
+
+            if output_data.shape[1] == 2: 
+                prob_no_rain, prob_rain = output_data[0]
+            else:  
+                prob_rain = output_data[0][0]
+                prob_no_rain = 1 - prob_rain
+
+            if prob_rain > RAIN_THRESHOLD:
+                print(f"It's raining! (Probability: {prob_rain:.2f})")
+            else:
+                print(f"It's not raining. (Probability: {prob_rain:.2f})")
+            requests.post(CONTROL_AI_URL,prob_rain)
+        sleep(5)
+thread_inference = threading.Thread(target=inference)
+thread_inference.daemon = True
+thread_inference.start()
 
 if __name__ == "__main__":
     while True:

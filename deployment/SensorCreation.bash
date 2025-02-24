@@ -58,11 +58,10 @@ fi
 
 # If all checks pass, proceed with the file
 echo "File '$filename' is valid and ready for processing."
-if [[ -z "${cluster_name}" ]]; then
-
 echo "Enter column to read in csv file"
 read -p "" column
-fi
+
+
 sanitized=$(echo "$column" | tr -cd 'a-z0-9.-' | sed -E 's/^[^a-z0-9]*//;s/[^a-z0-9]*$//;s/\.+/./g;s/^-*//;s/-*$//')
 # Ensure the sanitized string starts and ends with an alphanumeric character
 sanitized=$(echo "$sanitized" | sed -E 's/^[^a-z0-9]*//;s/[^a-z0-9]*$//')

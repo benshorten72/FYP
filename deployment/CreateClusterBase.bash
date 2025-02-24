@@ -56,7 +56,8 @@ echo "Creating docker subnet 172.100.0.0/16 for testbed"
 docker network create --subnet 172.100.0.0/16 testbed
 
 echo "Using k3d to create cluster - disabling inbuilt loadbalancer and using testbed network"
-k3d cluster create $cluster_name --k3s-arg "--disable=servicelb@server:0" --no-lb --wait --network testbed --k3s-arg "--disable=traefik"
+model_abs_path=$(realpath ./models/model.tflite)
+k3d cluster create $cluster_name --k3s-arg "--disable=servicelb@server:0" --no-lb --wait --network testbed --k3s-arg "--disable=traefik"  --volume $model_abs_path:/mnt/model
 
 kubectl config use-context k3d-$cluster_name
 
@@ -93,7 +94,6 @@ EOF
 # Install the ingress-nginx Helm chart
 kubectl edit validatingwebhookconfiguration ingress-nginx-admission
 helm install ingress-nginx ../ingress-nginx/ -n ingress-nginx --create-namespace --set clusterName=$cluster_name --set controller.admissionWebhooks.enabled=false
-
 INGRESS_LB_IP=$(kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 echo "Add $INGRESS_LB_IP to /etc/hosts"
 
