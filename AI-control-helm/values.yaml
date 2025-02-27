@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: pidgeot72/resource-constrainted-ai
+  repository: pidgeot72/control-ai
   tag: latest
   pullPolicy: Always
 
@@ -34,7 +34,6 @@ tolerations: []
 affinity: {}
 
 env:
-  - name: CLUSTER_NAME
-    value: ""
-  - name: CLUSTER_RANK
-    value: 1
+  - name: PORT
+    value: 5000
+  

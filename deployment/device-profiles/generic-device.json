@@ -10,7 +10,7 @@
         "mqtt": {
           "host": "172.100.150.4",
           "port": "1883",
-          "topic": "diamond/clamt",
+          "topic": "bla/temp",
           "CommandTopic": "test"
         }
       },

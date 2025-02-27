@@ -33,13 +33,19 @@ while true; do
 done
 echo "Sensors can now communicate with cluster"
 
-# echo "Installing split model on control"
-# kubectl config use-context k3d-control
-
-# helm install fy ../AI-helm/ \
-#   --set deployment.name=$cluster_name \
-#   --set container.name=$cluster_name \
-#   --set service.name=$cluster_name \
-#   --set resultEndPoint=$cluster_name \
-#   --set clusterName=$cluster_name \
-#   --set isCentralAI=True \
+echo "Installing AI model on control"
+kubectl config use-context k3d-control
+kubectl create configmap $cluster_name-ai --from-file=../AI-control-helm/test.py
+highestport=$(kubectl get svc -o wide | grep -Eo '500[0-9](\/|►)' | grep -Eo '[0-9]+' | sort -n | tail -1)
+nexthighest=$((highestport + 1))
+echo "Using port $nexthighest"
+helm install $cluster_name-ai ../AI-control-helm/ \
+  --set deployment.name=$cluster_name \
+  --set container.name=$cluster_name \
+  --set service.name=$cluster_name \
+  --set resultEndPoint=$cluster_name \
+  --set clusterName=$cluster_name \
+  --set service.port=$nexthighest \
+  --set env[0].name=PORT \
+  --set env[0].value=$nexthighest \
+  echo "Now accesible on http://control.local/$cluster_name"

@@ -25,6 +25,7 @@ if [[ -z "${cluster_name}" ]]; then
   done
 fi
 export cluster_name
+echo "Cluster name: $cluster_name"
 # Loop to get the starting IP range
 while true; do
   read -p "Enter the cluster external starting IP range (e.g., 1,2,3...): " ip_start_range
@@ -56,7 +57,13 @@ echo "Creating docker subnet 172.100.0.0/16 for testbed"
 docker network create --subnet 172.100.0.0/16 testbed
 
 echo "Using k3d to create cluster - disabling inbuilt loadbalancer and using testbed network"
-model_abs_path=$(realpath ./models/model.tflite)
+# use correct model depending on cluster type
+if [[ $cluster_name == "control" ]]; then
+    model_abs_path=$(realpath ./models/control_model.tflite)
+  else
+    model_abs_path=$(realpath ./models/edge_model.tflite)
+fi
+
 k3d cluster create $cluster_name --k3s-arg "--disable=servicelb@server:0" --no-lb --wait --network testbed --k3s-arg "--disable=traefik"  --volume $model_abs_path:/mnt/model
 
 kubectl config use-context k3d-$cluster_name

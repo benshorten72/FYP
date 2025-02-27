@@ -7,6 +7,7 @@ import threading
 import requests
 import os
 import numpy as np
+import json
 from ai_edge_litert.interpreter import Interpreter
 
 requests.packages.urllib3.util.connection.HAS_IPV6 = False
@@ -157,6 +158,12 @@ def handle_incoming_data():
         with data_lock:
             processed_data = dict(incoming_data)
             processed_data["rank"] = CLUSTER_RANK
+            processed_data["cluster_name"] = CLUSTER_NAME
+            # Add result = None, if no result has been added
+            # This means that on the model it will preform only inference
+            # If result does exist it will use it as labled data
+            if not "result" in processed_data.keys():
+                processed_data["result"]=None
             data_buffer.append(dict(processed_data))
             #Reset incoming data after interval 
             for column in incoming_data.keys():
@@ -168,7 +175,6 @@ def handle_incoming_data():
             print("data buffer halved")
             data_buffer = data_buffer[:len(data_buffer)//2]
         make_space(partioned_data)
-
 
 thread = threading.Thread(target=mqtt_thread)
 thread.daemon = True 
@@ -198,9 +204,6 @@ def fit_data():
             print("*"*40)
             print("\n")
 
-
-
-   
         return jsonify({"message": "Data received and processed successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -293,33 +296,46 @@ def inference():
     while True:
         print("doing inference")
         unprocessed_input_data = None
+        result=""
+        original_cluster=""
         with data_lock:
             if data_buffer:
                 unprocessed_input_data=data_buffer.pop(0)
+                result = unprocessed_input_data["result"]
                 del unprocessed_input_data["rank"]
+                original_cluster = unprocessed_input_data["cluster_name"]
+                del unprocessed_input_data["cluster_name"]
                 raw = list(unprocessed_input_data.values())
+            else:
+                return
         #Check if its been set
         if unprocessed_input_data:
             # FEED IN THE INPUT DATA
             input_details = interpreter.get_input_details()
             input_data = np.array([raw], dtype=np.float32)
-            interpreter.set_tensor(input_details[0]['index'], input_data)
+            # Set input tensor
+            input_index = input_details[0]['index']
+            interpreter.set_tensor(input_index, input_data)
+            # GET THE OUTPUT DATA
             interpreter.invoke()
             output_details = interpreter.get_output_details()
-            output_data = interpreter.get_tensor(output_details[0]['index'])
-
-            if output_data.shape[1] == 2: 
-                prob_no_rain, prob_rain = output_data[0]
-            else:  
-                prob_rain = output_data[0][0]
-                prob_no_rain = 1 - prob_rain
-
+            rain_data = interpreter.get_tensor(output_details[0]['index'])
+            node_data = interpreter.get_tensor(output_details[1]['index'])
+            node_data = node_data[0] #Send this to control
+            prob_rain = rain_data[0]
             if prob_rain > RAIN_THRESHOLD:
-                print(f"It's raining! (Probability: {prob_rain:.2f})")
+                print("Edge model thinks its raining:",prob_rain,"mm")
             else:
-                print(f"It's not raining. (Probability: {prob_rain:.2f})")
-            requests.post(CONTROL_AI_URL,prob_rain)
+                print("Edge model thinks its dry:",prob_rain,"mm")
+            send_to_control_model(node_data,result,original_cluster)
         sleep(5)
+
+def send_to_control_model(node_data,result,original_cluster):
+    node_list = node_data.toList()
+    data_json = json.dumps({'node_data': node_list,'name':original_cluster,'result':result})
+    sending_url = f"http://control.local/{original_cluster}/edge_result"
+    requests.post(sending_url,data_json)
+
 thread_inference = threading.Thread(target=inference)
 thread_inference.daemon = True
 thread_inference.start()

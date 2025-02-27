@@ -20,10 +20,3 @@
     }
   }
 ]
-
-kubectl delete cm asa-location && cluster_name=asa && helm install ai-model ../AI-helm \
---set deployment.name=$cluster_name-ai \
---set container.name=$cluster_name-ai \
---set configmapName=$cluster_name-python \
---set env[0].name=CLUSTER_NAME \
---set env[0].value=$cluster_name \
