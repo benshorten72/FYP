@@ -8,9 +8,9 @@
       "operatingState": "UP",
       "protocols": {
         "mqtt": {
-          "host": "172.100.150.4",
+          "host": "172.100.150.5",
           "port": "1883",
-          "topic": "bla/temp",
+          "topic": "khaosok/clamt",
           "CommandTopic": "test"
         }
       },

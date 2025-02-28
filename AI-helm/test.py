@@ -64,6 +64,7 @@ def mqtt_thread():
     client.on_message = on_message
     client.connect("edgex-mqtt-broker", 1883, 60)
     client.loop_start()
+    
 class Listener:
     def __init__(self, topic, name):
         self.topic = topic
@@ -305,37 +306,47 @@ def inference():
                 del unprocessed_input_data["rank"]
                 original_cluster = unprocessed_input_data["cluster_name"]
                 del unprocessed_input_data["cluster_name"]
+                del unprocessed_input_data["result"]
                 raw = list(unprocessed_input_data.values())
-            else:
-                return
+
         #Check if its been set
         if unprocessed_input_data:
+            data_good=True
+            for i in unprocessed_input_data.values():
+                if i == None:
+                    print("Missing data, infrence not possible")
+                    data_good=False
+                    break
+            if data_good:
             # FEED IN THE INPUT DATA
-            input_details = interpreter.get_input_details()
-            input_data = np.array([raw], dtype=np.float32)
-            # Set input tensor
-            input_index = input_details[0]['index']
-            interpreter.set_tensor(input_index, input_data)
-            # GET THE OUTPUT DATA
-            interpreter.invoke()
-            output_details = interpreter.get_output_details()
-            rain_data = interpreter.get_tensor(output_details[0]['index'])
-            node_data = interpreter.get_tensor(output_details[1]['index'])
-            node_data = node_data[0] #Send this to control
-            prob_rain = rain_data[0]
-            if prob_rain > RAIN_THRESHOLD:
-                print("Edge model thinks its raining:",prob_rain,"mm")
-            else:
-                print("Edge model thinks its dry:",prob_rain,"mm")
-            send_to_control_model(node_data,result,original_cluster)
+                input_details = interpreter.get_input_details()
+                input_data = np.array([raw], dtype=np.float32)
+                # Set input tensor
+                input_index = input_details[0]['index']
+                interpreter.set_tensor(input_index, input_data)
+                # GET THE OUTPUT DATA
+                interpreter.invoke()
+                output_details = interpreter.get_output_details()
+                rain_data = interpreter.get_tensor(output_details[0]['index'])
+                node_data = interpreter.get_tensor(output_details[1]['index'])
+                node_data = node_data[0] #Send this to control
+                prob_rain = rain_data[0]
+                if prob_rain > RAIN_THRESHOLD:
+                    print("Edge model thinks its raining:",prob_rain,"mm")
+                else:
+                    print("Edge model thinks its dry:",prob_rain,"mm")
+                send_to_control_model(node_data,result,original_cluster)
         sleep(5)
 
 def send_to_control_model(node_data,result,original_cluster):
-    node_list = node_data.toList()
-    data_json = json.dumps({'node_data': node_list,'name':original_cluster,'result':result})
+    node_list = node_data.tolist()
     sending_url = f"http://control.local/{original_cluster}/edge_result"
-    requests.post(sending_url,data_json)
+    if result == None:
+        result = "empty" 
+    headers = {'Content-Type': 'application/json'}
+    requests.post(sending_url,json={'node_data': node_list,'name':original_cluster,'result':result},headers=headers)
 
+print("starting inference thread")
 thread_inference = threading.Thread(target=inference)
 thread_inference.daemon = True
 thread_inference.start()

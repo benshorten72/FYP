@@ -59,7 +59,7 @@ docker network create --subnet 172.100.0.0/16 testbed
 echo "Using k3d to create cluster - disabling inbuilt loadbalancer and using testbed network"
 # use correct model depending on cluster type
 if [[ $cluster_name == "control" ]]; then
-    model_abs_path=$(realpath ./models/control_model.tflite)
+    model_abs_path=$(realpath ./models/control_model.keras)
   else
     model_abs_path=$(realpath ./models/edge_model.tflite)
 fi

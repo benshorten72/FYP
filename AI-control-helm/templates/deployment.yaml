@@ -41,7 +41,7 @@ spec:
               mountPath: /app/test.py
               subPath: test.py
             - name: model-storage
-              mountPath: /app/model/model.tflite
+              mountPath: /app/model/model.keras
       volumes:
         - name: python-volume
           configMap:

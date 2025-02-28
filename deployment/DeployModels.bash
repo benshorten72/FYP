@@ -48,4 +48,6 @@ helm install $cluster_name-ai ../AI-control-helm/ \
   --set service.port=$nexthighest \
   --set env[0].name=PORT \
   --set env[0].value=$nexthighest \
-  echo "Now accesible on http://control.local/$cluster_name"
+
+
+echo "Now accesible on http://control.local/$cluster_name"
