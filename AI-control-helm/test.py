@@ -19,8 +19,7 @@ CLUSTER_NAME = os.getenv("CLUSTER_NAME")
 CLUSTER_RANK = os.getenv("CLUSTER_RANK")
 PORT = os.getenv("PORT")
 INTERVAL = 3  # Maybe env var
-COLUMNS = ["ind", "indt", "temp", "indw", "wetb", "dewpt", "vappr", "rhum", "msl", "indm", "wdsp", "indwd", "wddir", "ww", "w", "sun", "vis", "clht", "clamt"]  # env var
-BUFFER_SIZE = 2  # Env var
+BUFFER_SIZE = 10  # Env var
 RAIN_THRESHOLD = 0.5
 MODEL_PATH = "/app/model/model.keras"
 PROFILE_URL = f"http://{CLUSTER_NAME}.local/core-metadata/api/v3/device/profile/name/Generic-MQTT-String-Float-Device"
@@ -38,16 +37,19 @@ data_lock = threading.Lock()
 data_buffer = []
 app = Flask(__name__)
 app.logger.disabled = True
-numpy_X_data = np.empty((0, 32))  # Adjust shape as needed
+
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
+print(f"Max content length: {app.config['MAX_CONTENT_LENGTH']} bytes")
+    
+numpy_X_data = np.empty((0, 32))
 numpy_Y_data = np.empty((0, 1))
 ## Vars that need to be defined for the function
 # Recieve node_data, data_result
-weights = None
+weights = loaded_model.get_weights() 
 X_data = []
 Y_data = []
 fed_weights = None
 print("Port:",PORT)
-
 @app.route('/edge_result', methods=['POST'])
 def edge_result():
     try:
@@ -63,8 +65,8 @@ def edge_result():
 
         node_data = json_data["node_data"]
         name = json_data["name"]
-        result = json_data.get("result")
-
+        result = float(json_data.get("result"))
+        print("Actual data result:",result)
         print(f"Processing data for node: {name}")
         with data_lock:
             data_buffer.append({"node_data": node_data, "result": result})
@@ -78,21 +80,25 @@ def edge_result():
 def ai_thread():
     global weights, fed_weights
     while True:
-        data_point = None
-        #Update to fed weights if different to current weights, I have it here awkwardly
-        # Because I dont want weights updated when inference or training is occuring
-        if fed_weights and fed_weights != weights:
-            weights = fed_weights
-            loaded_model.set_weights(weights)
+        try:
+            data_point = None
+            if fed_weights is not None and not all(np.array_equal(fed_w, w) for fed_w, w in zip(fed_weights, weights)):
+                print("Federated update incoming")
+                weights = fed_weights
+                loaded_model.set_weights(weights)
+                print("Weights updated")
 
-        with data_lock:
-            if data_buffer:
-                data_point = data_buffer.pop(0)
-            
-        if data_point:
-            print("Beginning Inference", flush=True)
-            inference(data_point["node_data"], data_point["result"])
-        sleep(1)
+            with data_lock:
+                if data_buffer:
+                    data_point = data_buffer.pop(0)
+
+            if data_point:
+                print("Beginning Inference", flush=True)
+                inference(data_point["node_data"], data_point["result"])
+            sleep(1)
+        except Exception as e:
+            print(f"AI Thread Error: {e}", flush=True)
+
 
 def inference(node_data, data_result):
     global numpy_X_data, numpy_Y_data, weights
@@ -101,7 +107,6 @@ def inference(node_data, data_result):
     edge_model_result = node_data
     edge_model_result = np.reshape(edge_model_result, (-1, 32))
     control_predictions = loaded_model.predict(edge_model_result)
-    print("Control predictions:", control_predictions, flush=True)
     # If result does not exist do not do training
     if data_result == "empty" or data_result == 'empty':
         print("No result", flush=True)
@@ -123,6 +128,7 @@ def inference(node_data, data_result):
 
         # Compile and train the control_model
         print(f"Training Model with batch size: {BATCH_SIZE}", flush=True)
+        print(f"Total values in storage:",len(numpy_X_data))
         history = loaded_model.fit(numpy_X_data, numpy_Y_data,
                                     epochs=5, batch_size=BATCH_SIZE)
 
@@ -136,7 +142,7 @@ def inference(node_data, data_result):
 def get_weights():
     try:
         weights_json = [w.tolist() for w in weights]
-        return jsonify({"weights": weights_json}), 200
+        return jsonify({"weights": weights_json,"data_amount":len(numpy_X_data)}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -144,19 +150,20 @@ def get_weights():
 @app.route('/set_weights', methods=['POST'])
 def set_weights():
     global fed_weights
+    print("Weights federating incoming")
     json_data = request.get_json(force=True)
     json_weights = json_data["weights"]
     fed_weights = [np.array(w) for w in json_weights]
-    # Serialize to JSON
     return jsonify({"Scuess": 'good'}), 200
 
 def run_flask_app():
-    app.run(host='0.0.0.0', port=PORT)
+    app.run(host='0.0.0.0', port=PORT,threaded=True)
 
 
 # Start the Flask app in a separate thread
 flask_thread = threading.Thread(target=run_flask_app)
 flask_thread.daemon = True
+sleep(2)
 flask_thread.start()
 
 # Start the AI thread
@@ -164,6 +171,21 @@ thread_inference = threading.Thread(target=ai_thread)
 thread_inference.daemon = True
 thread_inference.start()
 
+def watchdog_thread(target_thread):
+    while True:
+        if not target_thread.is_alive():
+            print("AI thread is not alive!", flush=True)
+        else:
+            print("AI thread is running", flush=True)
+        sleep(10)
+
+watchdog = threading.Thread(target=watchdog_thread, args=(thread_inference,))
+watchdog.daemon = True
+watchdog.start()
+
 # Keep the main thread alive to keep the daemon threads running
+print("Gettting federated weights")
+requests.post("https://control.local/parameter-server/update_my_weights",{"name":CLUSTER_NAME},verify=False)
+
 while True:
-    sleep(1)
+    sleep(2)

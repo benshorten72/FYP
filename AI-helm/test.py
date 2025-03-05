@@ -16,7 +16,7 @@ CLUSTER_NAME =os.getenv("CLUSTER_NAME")
 CLUSTER_RANK =os.getenv("CLUSTER_RANK")
 
 INTERVAL = 3 # Maybe env var
-COLUMNS = ["ind","indt","temp","indw","wetb","dewpt","vappr","rhum","msl","indm","wdsp","indwd","wddir","ww","w","sun","vis","clht","clamt"] # env var 
+COLUMNS = ["ind","indt","temp","indw","wetb","dewpt","vappr","rhum","msl","indm","wdsp","indwd","wddir","ww","w","sun","vis","clht","clamt","result"] # env var 
 BUFFER_SIZE = 10 # Env var 
 RAIN_THRESHOLD = 0.5
 MODEL_PATH = "/app/model/model.tflite"
@@ -128,7 +128,6 @@ def fetch_devices():
             print(f"Columns not being listened for: {unlistened_columns}")
         else:
             print("All columns are being listened for.")
-        print(f"All columns are being listened for???.{unlistened_columns}")
 
         handle_incoming_data()
         print(f"Buffer has been updated to contain: {data_buffer}")
@@ -151,7 +150,17 @@ def handle_incoming_data():
     global data_buffer
     # Check if number of connected devices is equal to COLUMNS and that buffer size isnt overflowing
     print(f"Current listeners: {len(listeners)}")
-    if (len(listeners)==len(COLUMNS)):
+    # Check if all the listners needed are present EXCEPT result
+    len_listeners = len(listeners)
+    len_columns = len(COLUMNS)
+    if "result" in COLUMNS:
+        len_columns-=1
+    for i in listeners:
+        if i.name == "result":
+            len_listeners -=1
+            break
+    # Process data if correct amount of listeners are present
+    if len_listeners==len_columns:
         if len(data_buffer) >= BUFFER_SIZE:
             data_buffer.pop(0)
 

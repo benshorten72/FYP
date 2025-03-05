@@ -1,4 +1,4 @@
-date,ind,rain,indt,temp,indw,wetb,dewpt,vappr,rhum,msl,indm,wdsp,indwd,wddir,ww,w,sun,vis,clht,clamt
+date,ind,result,indt,temp,indw,wetb,dewpt,vappr,rhum,msl,indm,wdsp,indwd,wddir,ww,w,sun,vis,clht,clamt
 23-jul-2010 18:00,0,0.0,0,13.8,0,12.3,10.9,13.1,83,1022.8,2,9,2,230,2,11,0.0,30000,50,8
 23-jul-2010 19:00,0,0.9,0,12.9,0,12.8,12.7,14.7,99,1022.9,2,7,2,220,60,62,0.0,9000,39,8
 23-jul-2010 20:00,0,0.8,0,12.5,0,12.5,12.5,14.5,100,1022.8,2,5,2,200,61,66,0.0,8000,2,8

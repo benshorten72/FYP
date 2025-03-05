@@ -12,7 +12,7 @@ spec:
   - host: control.local
     http:
       paths:
-      - path: /{{ .Values.clusterName }}(/|$)(.*)
+      - path: /parameter-server(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:

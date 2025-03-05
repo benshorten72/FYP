@@ -22,10 +22,10 @@ if [[ -z "${cluster_name}" ]]; then
     fi
   done
 fi
-kubectl config use-context k3d-$cluster_name
-echo "Uninstalling sensors"
-for release in $(helm list --all-namespaces | awk '/^$cluster_name/ {print $1}'); do
-  helm uninstall "$cluster_name"
+kubectl config use-context k3d-control
+echo "Uninstalling any sensors/AI associated with cluster"
+for release in $(helm list --all-namespaces | awk -v cn="$cluster_name" '$1 ~ "^" cn {print $1}'); do
+  helm uninstall "$release"
 done
 
 echo "Deassociating it with control cluster"

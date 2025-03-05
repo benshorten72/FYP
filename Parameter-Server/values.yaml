@@ -1,0 +1,39 @@
+replicaCount: 1
+
+image:
+  repository: pidgeot72/resource-constrainted-ai
+  tag: latest
+  pullPolicy: Always
+
+clusterName: ai
+isCentralAI: False
+deployment:
+  name: ai
+container:
+  name: ai
+
+resultEndPoint: test.com
+configmapName: parameter-python
+service:
+  name: ai
+  type: ClusterIP
+  port: 5000
+replicaCount: 1
+resources:
+  limits:
+    cpu: "1"
+    memory: "512Mi"
+  requests:
+    cpu: "0.5"
+    memory: "256Mi"
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+env:
+  - name: PORT
+    value: 5000
+  
