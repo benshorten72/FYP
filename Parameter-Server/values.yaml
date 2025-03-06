@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: pidgeot72/resource-constrainted-ai
+  repository: pidgeot72/parameter-server
   tag: latest
   pullPolicy: Always
 

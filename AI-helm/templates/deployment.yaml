@@ -40,6 +40,7 @@ spec:
             - name: python-volume
               mountPath: /app/test.py
               subPath: test.py
+              readOnly: false
             - name: model-storage
               mountPath: /app/model/model.tflite
       volumes:

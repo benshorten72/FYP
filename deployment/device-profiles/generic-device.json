@@ -8,9 +8,9 @@
       "operatingState": "UP",
       "protocols": {
         "mqtt": {
-          "host": "172.100.150.5",
+          "host": "172.100.150.4",
           "port": "1883",
-          "topic": "juna/clamt",
+          "topic": "kaladin/clamt",
           "CommandTopic": "test"
         }
       },

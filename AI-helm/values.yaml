@@ -11,7 +11,7 @@ deployment:
   name: ai
 container:
   name: ai
-
+inferenceConfigmap: inference
 resultEndPoint: test.com
 
 service:

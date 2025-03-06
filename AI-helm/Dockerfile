@@ -1,5 +1,5 @@
-FROM python:3.9-slim 
-#Lightweight
+FROM python:3.9-slim
+# Lightweight
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
@@ -20,6 +20,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app
 WORKDIR /app
+
+RUN chmod -R a+rwx /app
 
 EXPOSE 5000
 

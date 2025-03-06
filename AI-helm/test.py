@@ -9,9 +9,11 @@ import os
 import numpy as np
 import json
 from ai_edge_litert.interpreter import Interpreter
-
 requests.packages.urllib3.util.connection.HAS_IPV6 = False
-
+import os
+import sys
+import stat
+from inferenceLite import inference_data
 CLUSTER_NAME =os.getenv("CLUSTER_NAME")
 CLUSTER_RANK =os.getenv("CLUSTER_RANK")
 
@@ -298,7 +300,7 @@ interpreter.invoke()
 output_details = interpreter.get_output_details()
 output_data = interpreter.get_tensor(output_details[0]['index'])
 
-def inference():
+def do_inference():
     global data_buffer
     unprocessed_input_data = None
     print("doing inference")
@@ -328,18 +330,7 @@ def inference():
                     break
             if data_good:
             # FEED IN THE INPUT DATA
-                input_details = interpreter.get_input_details()
-                input_data = np.array([raw], dtype=np.float32)
-                # Set input tensor
-                input_index = input_details[0]['index']
-                interpreter.set_tensor(input_index, input_data)
-                # GET THE OUTPUT DATA
-                interpreter.invoke()
-                output_details = interpreter.get_output_details()
-                rain_data = interpreter.get_tensor(output_details[0]['index'])
-                node_data = interpreter.get_tensor(output_details[1]['index'])
-                node_data = node_data[0] #Send this to control
-                prob_rain = rain_data[0]
+                node_data, prob_rain = inference_data(raw,interpreter)
                 if prob_rain > RAIN_THRESHOLD:
                     print("Edge model thinks its raining:",prob_rain,"mm")
                 else:
@@ -356,7 +347,7 @@ def send_to_control_model(node_data,result,original_cluster):
     requests.post(sending_url,json={'node_data': node_list,'name':original_cluster,'result':result},headers=headers)
 
 print("starting inference thread")
-thread_inference = threading.Thread(target=inference)
+thread_inference = threading.Thread(target=do_inference)
 thread_inference.daemon = True
 thread_inference.start()
 

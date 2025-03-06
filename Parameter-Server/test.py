@@ -84,7 +84,8 @@ def get_weights_from_clusters(clusters):
                 else:
                     print(f"Weights missing from {cluster}")
             else:
-                print(f"Weights not retrieved from cluster {cluster}")
+                
+                print(f"Weights not retrieved from cluster {cluster}",json_data.status_code,json_data.json()["error"])
         except Exception as e:
             print(f"Error retrieving weights from {cluster}: {e}")
 
@@ -92,7 +93,9 @@ def get_weights_from_clusters(clusters):
 
 
 def federated_average(weights,number_of_datas,clusters):
+    global has_been_set
     print("Getting federated average")
+    print(weights[clusters[0]])
     federated_average_weight = np.zeros_like(weights[clusters[0]])
     total = sum(number_of_datas.values()) 
     if total == 0:
@@ -107,16 +110,16 @@ def federated_average(weights,number_of_datas,clusters):
     has_been_set=True
     return federated_average_weight
 
-def set_cluster_weights(cluster,federated_averages):
+def set_cluster_weights(clusters, federated_averages):
     for cluster in clusters:
-                size_mb = sum(arr.nbytes for arr in federated_averages) / (1024 * 1024)
-                print(f"Size of federated_averages in numpy: {size_mb:.2f} MB")
-                weights_json = [w.tolist() for w in federated_averages] 
-                size_mb = sys.getsizeof(weights_json) / (1024 * 1024)
-                response = requests.post(f"http://control.local/{cluster}/set_weights", json={"weights": weights_json}) 
-                print(response.status_code)
-                print(f"{cluster} weights have been federated")
-                weights_json = [w.tolist() for w in federated_averages] 
+        size_mb = sum(arr.nbytes for arr in federated_averages) / (1024 * 1024)
+        print(f"Size of federated_averages in numpy: {size_mb:.2f} MB")
+        weights_json = [w.tolist() for w in federated_averages]
+        size_mb = sys.getsizeof(weights_json) / (1024 * 1024)
+        response = requests.post(f"http://control.local/{cluster}/set_weights", json={"weights": weights_json})
+        print(response.status_code)
+        print(f"{cluster} weights have been federated")
+        weights_json = [w.tolist() for w in federated_averages] 
 
 # Start the Flask app in a separate thread, so if app while sleeping gets pinged to
 # set a new clusters weights it can
