@@ -3,6 +3,7 @@ from ai_edge_litert.interpreter import Interpreter
 import numpy as np
 
 def inference_data(raw,interpreter):
+    print("Running light AI")
     input_details = interpreter.get_input_details()
     input_data = np.array([raw], dtype=np.float32)
     # Set input tensor

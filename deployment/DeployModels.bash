@@ -1,23 +1,5 @@
 #!/bin/bash
 echo "Installing split model on edge"
-while true; do
-    echo "Does this need to preform split learning? This will require a more computationally expensive \n running on edge due to need for Tensorflow and a full python image rather than a silm \n
-    (y/n)?"
-    read -p "" response
-    if [[ "$response" =~ ^[Yy]$ ]]; then
-        echo "Split learning enabled"
-        inference_script="inferenceHeavy.py"
-        break
-    elif [[ "$response" =~ ^[Nn]$ ]]; then
-        echo "Split learning disabled"
-        inference_script="inferenceLite.py"
-
-        break
-    else
-        echo "Invalid input. Please enter 'y' or 'n'."
-    fi
-done
-
 kubectl create configmap $cluster_name-python --from-file=../AI-helm/test.py
 kubectl create configmap inference --from-file=../AI-helm/$inference_script
 
@@ -25,12 +7,14 @@ helm install ai-model ../AI-helm \
   --set deployment.name=$cluster_name-ai \
   --set clusterName=$cluster_name \
   --set container.name=$cluster_name-ai \
+  --set image.repository=$image \
   --set configmapName=$cluster_name-python \
   --set env[0].name=CLUSTER_NAME \
   --set env[0].value=$cluster_name \
   --set env[1].name=CLUSTER_RANK \
   --set env[1].value=$cluster_rank \
-
+  --set env[2].name=SPLIT_CHECK \
+  --set env[2].value=$split_check \
 echo "Adding Device template to MQTT service. Will fail unnless both ingress and service are ready"
 while true; do
     response=$(curl -4 -X POST -H "Content-Type: application/json" -d @./device-profiles/base-template-profile.json -s -o /dev/null -w "%{http_code}" http://$cluster_name.local/core-metadata/api/v3/deviceprofile)
@@ -68,6 +52,7 @@ helm install $cluster_name-ai ../AI-control-helm/ \
   --set service.port=$nexthighest \
   --set env[0].name=PORT \
   --set env[0].value=$nexthighest \
-
+  --set env[1].name=SPLIT_CHECK \
+  --set env[1].value=$split_check \
 
 echo "Now accesible on http://control.local/$cluster_name"

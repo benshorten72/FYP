@@ -55,12 +55,35 @@ echo "You have defined the IP range as 172.100.150.$ip_start_range-172.100.150.$
 
 echo "Creating docker subnet 172.100.0.0/16 for testbed"
 docker network create --subnet 172.100.0.0/16 testbed
-
+if [[ $cluster_name != "control" ]]; then
+  while true; do
+      echo "Does this need to preform split learning? This will require a more computationally expensive \n running on edge due to need for Tensorflow and a full python image rather than a silm \n
+      (y/n)?"
+      read -p "" response
+      if [[ "$response" =~ ^[Yy]$ ]]; then
+          echo "Split learning enabled"
+          export split_check="True"
+          export image="pidgeot72/control-ai"
+          export inference_script="inferenceHeavy.py"
+          break
+      elif [[ "$response" =~ ^[Nn]$ ]]; then
+          echo "Split learning disabled"
+          export split_check="False"
+          export image="pidgeot72/resource-constrainted-ai"
+          export inference_script="inferenceLite.py"
+          break
+      else
+          echo "Invalid input. Please enter 'y' or 'n'."
+      fi
+  done
+fi
 echo "Using k3d to create cluster - disabling inbuilt loadbalancer and using testbed network"
 # use correct model depending on cluster type
 if [[ $cluster_name == "control" ]]; then
     model_abs_path=$(realpath ./models/control_model.keras)
-  else
+  elif [[ $split_check == "True" ]]; then
+    model_abs_path=$(realpath ./models/edge_model.keras)
+  elif [[ $split_check == "False" ]]; then
     model_abs_path=$(realpath ./models/edge_model.tflite)
 fi
 

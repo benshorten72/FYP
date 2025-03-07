@@ -8,24 +8,24 @@ import requests
 import os
 import numpy as np
 import json
-from ai_edge_litert.interpreter import Interpreter
+from ai_edge_litert.loaded_model import Interpreter
 requests.packages.urllib3.util.connection.HAS_IPV6 = False
 import os
 import sys
 import stat
-from inferenceLite import inference_data
 CLUSTER_NAME =os.getenv("CLUSTER_NAME")
 CLUSTER_RANK =os.getenv("CLUSTER_RANK")
+SPLIT_LEARNING=os.getenv("SPLIT_LEARNING")
 
 INTERVAL = 3 # Maybe env var
 COLUMNS = ["ind","indt","temp","indw","wetb","dewpt","vappr","rhum","msl","indm","wdsp","indwd","wddir","ww","w","sun","vis","clht","clamt","result"] # env var 
 BUFFER_SIZE = 10 # Env var 
 RAIN_THRESHOLD = 0.5
-MODEL_PATH = "/app/model/model.tflite"
 PROFILE_URL = f"http://{CLUSTER_NAME}.local/core-metadata/api/v3/device/profile/name/Generic-MQTT-String-Float-Device"
 CONTROL_URL = "http://control.local"
 CONTROL_AI_URL = CONTROL_URL+f"/{CLUSTER_NAME}"
 data_lock = threading.Lock()
+training_lock = threading.Lock()
 # Incoming data added to buffer and is reset on interval
 incoming_data = {}
 listeners = []
@@ -34,6 +34,35 @@ client = mqtt.Client()
 clusters = {}
 sensors ={}
 app = Flask(__name__)
+
+
+if SPLIT_LEARNING=="True":
+    temp=True
+    MODEL_PATH = "/app/model/model.keras"
+    from inferenceHeavy import inference_data
+
+
+    import tensorflow as tf
+    loaded_model = tf.keras.models.load_model(MODEL_PATH)
+    loaded_model.compile(optimizer='adam',
+                        loss='mean_squared_error',
+                        metrics=['mae'])
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+else:
+    temp=False
+    from inferenceLite import inference_data
+    MODEL_PATH = "/app/model/model.tflite"
+    # AI
+    loaded_model = Interpreter(model_path=MODEL_PATH)
+    signatures = loaded_model.get_signature_list()
+    loaded_model.allocate_tensors()
+
+    # GET THE OUTPUT DATA
+    loaded_model.invoke()
+    output_details = loaded_model.get_output_details()
+    output_data = loaded_model.get_tensor(output_details[0]['index'])
+
+SPLIT_CHECK=temp
 
 for i in COLUMNS:
     incoming_data[i]=None
@@ -192,6 +221,17 @@ thread = threading.Thread(target=mqtt_thread)
 thread.daemon = True 
 thread.start()
 # ---------------------------------------
+@app.route('/back_propagate',methods=['POST'])
+def back_propagate():
+    data = request.get_json()
+    #Fix imports and optimser stufff
+    if SPLIT_CHECK:
+        received_gradients = [tf.convert_to_tensor(np.array(g), dtype=tf.float32) for g in data["gradients"]]
+        with training_lock:
+            optimizer.apply_gradients(zip(received_gradients, loaded_model.trainable_variables))
+        return jsonify({"message": "Gradients applied successfully!"})
+    return jsonify({"message": "Gradients cannot be applied due to split learning disabled"})
+
 
 @app.route('/get_buffer', methods=['GET'])
 def get_buffer():
@@ -290,15 +330,6 @@ def make_space(partioned_data):
         print("No buffers avalible")
 
 # ------------------------------------------------------------------------------------------------------------------------
-# AI
-interpreter = Interpreter(model_path=MODEL_PATH)
-signatures = interpreter.get_signature_list()
-interpreter.allocate_tensors()
-
-# GET THE OUTPUT DATA
-interpreter.invoke()
-output_details = interpreter.get_output_details()
-output_data = interpreter.get_tensor(output_details[0]['index'])
 
 def do_inference():
     global data_buffer
@@ -330,7 +361,8 @@ def do_inference():
                     break
             if data_good:
             # FEED IN THE INPUT DATA
-                node_data, prob_rain = inference_data(raw,interpreter)
+                with training_lock:
+                    node_data, prob_rain = inference_data(raw,loaded_model)
                 if prob_rain > RAIN_THRESHOLD:
                     print("Edge model thinks its raining:",prob_rain,"mm")
                 else:
