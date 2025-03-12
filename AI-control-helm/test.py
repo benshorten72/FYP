@@ -17,12 +17,14 @@ log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 CLUSTER_NAME = os.getenv("CLUSTER_NAME")
 CLUSTER_RANK = os.getenv("CLUSTER_RANK")
-SPLIT_LEARNING = os.getenv("CLUSTER_RANK")
-if SPLIT_LEARNING=="True":
+SPLIT_LEARNING = os.getenv("SPLIT_CHECK")
+if SPLIT_LEARNING.lower()=="true":
     temp=True
 else:
     temp=False
+
 SPLIT_CHECK=temp
+print(f"Split Learning enabled: {SPLIT_CHECK}")
 
 PORT = os.getenv("PORT")
 INTERVAL = 3  # Maybe env var
@@ -107,7 +109,6 @@ def ai_thread():
         except Exception as e:
             print(f"AI Thread Error: {e}", flush=True)
 
-
 def inference(node_data, data_result):
     global numpy_X_data, numpy_Y_data, weights
     node_data = np.array(node_data)
@@ -119,6 +120,8 @@ def inference(node_data, data_result):
     if data_result == "empty" or data_result == 'empty':
         print("No result", flush=True)
         return
+    else: 
+        print(data_result,flush=True)
     # IF data result exists, add it and intermediate layer to batches
         # Add data_result to Y and beginnging nodes to X
     X_data.append(edge_model_result)
@@ -138,17 +141,19 @@ def inference(node_data, data_result):
         print(f"Training Model with batch size: {BATCH_SIZE}", flush=True)
         print(f"Total values in storage:",len(numpy_X_data))
         optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-        
         dataset = tf.data.Dataset.from_tensor_slices((numpy_X_data, numpy_Y_data))
         dataset = dataset.batch(BATCH_SIZE)
-        for epoch in range(5):
-            with tf.GradientTape() as tape: # This will track computations performed on tensors inside the block 
-                for batch_X, batch_Y in dataset:
-                    predictions = loaded_model(batch_X, training=True) # This is the forward pass 
+        for epoch in range(5):  
+            for batch_X, batch_Y in dataset:
+                with tf.GradientTape() as tape:  # Move this inside the batch loop
+                    predictions = loaded_model(batch_X, training=True)  
                     loss = tf.keras.losses.MeanSquaredError()(batch_Y, predictions)
-                gradients = tape.gradient(loss, loaded_model.trainable_variables) # gradients get calculated via calling tape.gradient 
+
+                gradients = tape.gradient(loss, loaded_model.trainable_variables)  
                 optimizer.apply_gradients(zip(gradients, loaded_model.trainable_variables))
+
             print(f"Epoch {epoch+1}, Loss: {loss.numpy()}")
+        
 
         if len(numpy_X_data) > MAX_DATASET_SIZE:
             numpy_X_data = numpy_X_data[-MAX_DATASET_SIZE:]
@@ -156,10 +161,21 @@ def inference(node_data, data_result):
 
         weights = loaded_model.get_weights()
         if SPLIT_CHECK:
+            print("Prepping backprop",flush=True)
+            # Compute gradients as usual
+            for var in loaded_model.trainable_variables:
+                print("Variable shape:", var.shape,flush=True)
+            #Get top gradient
+            gradients=[gradients[0]]
             gradients_serializable = [grad.numpy().tolist() for grad in gradients]
-            # Send the gradients to the head model via HTTP
+            # Send the cut gradient to the head model via HTTP
             payload = {"gradients": gradients_serializable}
-            response = requests.post("http://{CLUSTER_NAME}.local/back_propagate", json=payload)
+            back_prop_url=f"http://{CLUSTER_NAME}.local/ai/back_propagate"
+            print(f"Backpropagating weights to edge on",back_prop_url,flush=True)
+
+            response = requests.post(back_prop_url, json=payload)
+            print(response,flush=True)
+
 
 @app.route('/get_weights', methods=['GET'])
 def get_weights():

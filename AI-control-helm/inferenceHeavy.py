@@ -6,8 +6,7 @@ def inference_data(raw,model):
     # Perform inference
     output_data = model.predict(input_data)
     
-    # Assuming output has two parts like the TFLite model
-    node_data = output_data[0][0]  # First output
-    prob_rain = output_data[1][0]  # Second output
+    node_data = output_data[0][0] 
+    prob_rain = output_data[1][0] 
     
     return node_data, prob_rain

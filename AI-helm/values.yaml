@@ -32,9 +32,11 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
-
+modelFileName: model.tflite
 env:
   - name: CLUSTER_NAME
     value: ""
   - name: CLUSTER_RANK
     value: 1
+  - name: SPLIT_LEARNING
+    value: "False"

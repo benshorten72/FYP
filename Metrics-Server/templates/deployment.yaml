@@ -40,16 +40,8 @@ spec:
             - name: python-volume
               mountPath: /app/test.py
               subPath: test.py
-              readOnly: false
-            - name: model-storage
-              mountPath: /app/model/{{ .Values.modelFileName }}
       volumes:
-        - name: csv-volume
-          configMap:
-            name: {{ .Values.configmapName }}
         - name: python-volume
           configMap:
             name: {{ .Values.configmapName }}
-        - name: model-storage
-          hostPath:
-            path: /mnt/model
+

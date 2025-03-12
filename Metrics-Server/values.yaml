@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: pidgeot72/control-ai
+  repository: pidgeot72/parameter-server
   tag: latest
   pullPolicy: Always
 
@@ -13,7 +13,7 @@ container:
   name: ai
 
 resultEndPoint: test.com
-
+configmapName: metrics-python
 service:
   name: ai
   type: ClusterIP
@@ -36,8 +36,4 @@ affinity: {}
 env:
   - name: PORT
     value: 5000
-  - name: SPLIT_CHECK
-    value: "false"
-  - name: CLUSTER_NAME
-    value: ""
   

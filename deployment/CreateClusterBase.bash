@@ -65,12 +65,14 @@ if [[ $cluster_name != "control" ]]; then
           export split_check="True"
           export image="pidgeot72/control-ai"
           export inference_script="inferenceHeavy.py"
+          export model_file_name="model.keras"
           break
       elif [[ "$response" =~ ^[Nn]$ ]]; then
           echo "Split learning disabled"
           export split_check="False"
           export image="pidgeot72/resource-constrainted-ai"
           export inference_script="inferenceLite.py"
+          export model_file_name="model.tflite"
           break
       else
           echo "Invalid input. Please enter 'y' or 'n'."
@@ -86,7 +88,7 @@ if [[ $cluster_name == "control" ]]; then
   elif [[ $split_check == "False" ]]; then
     model_abs_path=$(realpath ./models/edge_model.tflite)
 fi
-
+echo "Using $model_abs_path, because split learning enabled = $split_check "
 k3d cluster create $cluster_name --k3s-arg "--disable=servicelb@server:0" --no-lb --wait --network testbed --k3s-arg "--disable=traefik"  --volume $model_abs_path:/mnt/model
 
 kubectl config use-context k3d-$cluster_name

@@ -30,5 +30,5 @@ else
     if [[ "$federated_check" =~ ^[Yy]$ ]]; then
             ./ParameterServerCreation.bash
     fi
-    
+    ./MetricsServerCreation.bash
 fi

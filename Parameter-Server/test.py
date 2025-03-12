@@ -15,7 +15,7 @@ log.setLevel(logging.ERROR)
 CLUSTER_NAME = os.getenv("CLUSTER_NAME")
 CLUSTER_RANK = os.getenv("CLUSTER_RANK")
 PORT = os.getenv("PORT")
-INTERVAL = 3  # Maybe env var
+INTERVAL = 10  # Maybe env var
 CONTROL_URL = "http://control.local"
 MAX_DATASET_SIZE = 1000  
 BATCH_SIZE = 16

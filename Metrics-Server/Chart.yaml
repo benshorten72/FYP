@@ -1,0 +1,5 @@
+apiVersion: v2
+name: resource-constrained-ai
+description: A model for training on IoT data
+version: 0.1.0
+appVersion: "1.0"

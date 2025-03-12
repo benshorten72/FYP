@@ -8,14 +8,16 @@ import requests
 import os
 import numpy as np
 import json
-from ai_edge_litert.loaded_model import Interpreter
+from datetime import datetime
+
+from ai_edge_litert.interpreter  import Interpreter
 requests.packages.urllib3.util.connection.HAS_IPV6 = False
 import os
 import sys
 import stat
 CLUSTER_NAME =os.getenv("CLUSTER_NAME")
 CLUSTER_RANK =os.getenv("CLUSTER_RANK")
-SPLIT_LEARNING=os.getenv("SPLIT_LEARNING")
+SPLIT_LEARNING=os.getenv("SPLIT_CHECK")
 
 INTERVAL = 3 # Maybe env var
 COLUMNS = ["ind","indt","temp","indw","wetb","dewpt","vappr","rhum","msl","indm","wdsp","indwd","wddir","ww","w","sun","vis","clht","clamt","result"] # env var 
@@ -24,6 +26,7 @@ RAIN_THRESHOLD = 0.5
 PROFILE_URL = f"http://{CLUSTER_NAME}.local/core-metadata/api/v3/device/profile/name/Generic-MQTT-String-Float-Device"
 CONTROL_URL = "http://control.local"
 CONTROL_AI_URL = CONTROL_URL+f"/{CLUSTER_NAME}"
+METRICS_SERVER= "http://control.local/metrics/add_metrics"
 data_lock = threading.Lock()
 training_lock = threading.Lock()
 # Incoming data added to buffer and is reset on interval
@@ -34,9 +37,28 @@ client = mqtt.Client()
 clusters = {}
 sensors ={}
 app = Flask(__name__)
+print("Split learning enabled:",SPLIT_LEARNING)
 
+def send_metrics(data_name,values):
+    try:    
+        response=requests.post(METRICS_SERVER,json={'cluster_name':CLUSTER_NAME,'data_name':data_name,'time':datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+        values:values})
+        response.raise_for_status() 
+        print(f"Metrics sent successfully: {data_name}")
+    except requests.exceptions.RequestException as e:
+        # Handle connection errors, timeouts, or invalid responses
+        print(f"Failed to send metrics: {e}")
+    except ValueError as e:
+        # Handle JSON serialization errors
+        print(f"Invalid data format: {e}")
+    except Exception as e:
+        # Catch any other unexpected errors
+        print(f"Unexpected error: {e}")
 
-if SPLIT_LEARNING=="True":
+    
+    
+
+if SPLIT_LEARNING.lower()=="true":
     temp=True
     MODEL_PATH = "/app/model/model.keras"
     from inferenceHeavy import inference_data
@@ -48,6 +70,9 @@ if SPLIT_LEARNING=="True":
                         loss='mean_squared_error',
                         metrics=['mae'])
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    for layer in loaded_model.layers:
+        layer.trainable = True
+    loaded_model.get_layer("edge_output").trainable = False
 else:
     temp=False
     from inferenceLite import inference_data
@@ -61,7 +86,7 @@ else:
     loaded_model.invoke()
     output_details = loaded_model.get_output_details()
     output_data = loaded_model.get_tensor(output_details[0]['index'])
-
+    
 SPLIT_CHECK=temp
 
 for i in COLUMNS:
@@ -209,7 +234,7 @@ def handle_incoming_data():
             #Reset incoming data after interval 
             for column in incoming_data.keys():
                 incoming_data[column] = None
-    
+    send_metrics("edge_data_buffer_size",[len(data_buffer)])
     if len(data_buffer) == BUFFER_SIZE:
         partioned_data = data_buffer[len(data_buffer)//2:]
         with data_lock:
@@ -224,11 +249,27 @@ thread.start()
 @app.route('/back_propagate',methods=['POST'])
 def back_propagate():
     data = request.get_json()
+    print("Back propagation recieved. Applying to model",flush=True)
     #Fix imports and optimser stufff
     if SPLIT_CHECK:
-        received_gradients = [tf.convert_to_tensor(np.array(g), dtype=tf.float32) for g in data["gradients"]]
+        received_gradients = [tf.convert_to_tensor(np.array(g), dtype=tf.float32) for g in data["gradients"]]       
         with training_lock:
-            optimizer.apply_gradients(zip(received_gradients, loaded_model.trainable_variables))
+            grads_and_vars = list(zip(received_gradients, loaded_model.trainable_variables))
+            for var in loaded_model.trainable_variables:
+                print(f"Trainable Variable Shape: {var.shape}", flush=True)
+
+            for grad, var in zip(received_gradients, loaded_model.trainable_variables):
+                print(f"Received Gradient shape: {grad.shape}, Variable shape: {var.shape}", flush=True)
+
+            # Filter out invalid gradient-variable pairs
+            valid_grads_and_vars = [(g, v) for g, v in grads_and_vars if g.shape == v.shape]
+            # This issue needs to be sorted
+            if len(valid_grads_and_vars) == 0:
+                print("ERROR: No valid gradient-variable pairs!",flush=True)
+            else:
+                print(f"Found {len(valid_grads_and_vars)} valid matching gradients",flush=True)
+                optimizer.apply_gradients(valid_grads_and_vars)
+        print("Applied to model",flush=True)
         return jsonify({"message": "Gradients applied successfully!"})
     return jsonify({"message": "Gradients cannot be applied due to split learning disabled"})
 
@@ -245,16 +286,16 @@ def fit_data():
         if not data_to_be_fit:
             return jsonify({"error": "No data provided"}), 400
         with data_lock:
-            print("\n")
-            print("*"*40)
-            print("--- Recieving incoming data to fit ---")
+            print("\n",flush=True)
+            print("*"*40,flush=True)
+            print("--- Recieving incoming data to fit ---",flush=True)
             data_buffer.extend(data_to_be_fit)            
             sorted_data = sorted(data_buffer, key=lambda x: x["rank"])
             data_buffer = sorted_data[:10]
-            print(f"Received buffer")
-            print(f"Loosing data:",len(sorted_data[10:]))
-            print("*"*40)
-            print("\n")
+            print(f"Received buffer",flush=True)
+            print(f"Loosing data:",len(sorted_data[10:]),flush=True)
+            print("*"*40,flush=True)
+            print("\n",flush=True)
 
         return jsonify({"message": "Data received and processed successfully"}), 200
     except Exception as e:
@@ -293,7 +334,7 @@ def partition_and_send(candidates,partitioned_data):
         data_to_send = partitioned_data[:data_amount]
         # Remove the sent data from partitioned_data
         partitioned_data = partitioned_data[data_amount:]
-        print(f"Sending partioned data to cluster:{cluster}")
+        print(f"Sending partioned data to cluster:{cluster}",flush=True)
         send_buffer_to_fit(cluster, data_to_send)
 
 
@@ -318,14 +359,14 @@ def make_space(partioned_data):
         min_rank_cluster = max(buffers, key=lambda cluster: clusters[cluster])
 
         if not candidates_to_send_data:
-            print(f"\: No free space avalible, sending all to min rank cluster {min_rank_cluster}")
+            print(f"\: No free space avalible, sending all to min rank cluster {min_rank_cluster}",flush=True)
             candidates_to_send_data[min_rank_cluster] = 0
         if space_needed > 0:
             print(f"space_needed:{space_needed}")
             # Add un-allocate space to lowest ranked cluster
             candidates_to_send_data[min_rank_cluster]+=space_needed
         partition_and_send(candidates_to_send_data,partioned_data)
-        print(f"Candidates to send extra data {candidates_to_send_data} \n Sending...")
+        print(f"Candidates to send extra data {candidates_to_send_data} \n Sending...",flush=True)
     else:
         print("No buffers avalible")
 
@@ -364,9 +405,10 @@ def do_inference():
                 with training_lock:
                     node_data, prob_rain = inference_data(raw,loaded_model)
                 if prob_rain > RAIN_THRESHOLD:
-                    print("Edge model thinks its raining:",prob_rain,"mm")
+                    print("Edge model thinks its raining:",prob_rain,"mm",flush=True)
                 else:
-                    print("Edge model thinks its dry:",prob_rain,"mm")
+                    print("Edge model thinks its dry:",prob_rain,"mm",flush=True)
+                send_metrics("edge_inference",[prob_rain])
                 send_to_control_model(node_data,result,original_cluster)
         sleep(5)
 
@@ -377,7 +419,6 @@ def send_to_control_model(node_data,result,original_cluster):
         result = "empty" 
     headers = {'Content-Type': 'application/json'}
     requests.post(sending_url,json={'node_data': node_list,'name':original_cluster,'result':result},headers=headers)
-
 print("starting inference thread")
 thread_inference = threading.Thread(target=do_inference)
 thread_inference.daemon = True
