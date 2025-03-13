@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 import json
 from datetime import datetime
+from time import time
 
 requests.packages.urllib3.util.connection.HAS_IPV6 = False
 import logging
@@ -34,6 +35,7 @@ MODEL_PATH = "/app/model/model.keras"
 PROFILE_URL = f"http://{CLUSTER_NAME}.local/core-metadata/api/v3/device/profile/name/Generic-MQTT-String-Float-Device"
 CONTROL_URL = "http://control.local"
 CONTROL_AI_URL = CONTROL_URL + f"/{CLUSTER_NAME}"
+METRICS_SERVER= "http://control.local/metrics/add_metrics"
 
 MAX_DATASET_SIZE = 1000  
 BATCH_SIZE = 16
@@ -60,6 +62,18 @@ X_data = []
 Y_data = []
 fed_weights = None
 print("Port:",PORT)
+def send_metrics(data_name,values):
+    try:    
+        response=requests.post(METRICS_SERVER,json={'cluster_name':CLUSTER_NAME,'data_name':data_name,'time':datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+        'values':values})
+        response.raise_for_status() 
+        print(f"Metrics sent successfully: {data_name}")
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to send metrics: {e}")
+    except ValueError as e:
+        print(f"Invalid data format: {e}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")   
 @app.route('/edge_result', methods=['POST'])
 def edge_result():
     try:
@@ -103,8 +117,10 @@ def ai_thread():
                     data_point = data_buffer.pop(0)
 
             if data_point:
-                print("Beginning Inference", flush=True)
+                start_time = time()
                 inference(data_point["node_data"], data_point["result"])
+                inference_time = time() - start_time
+                send_metrics("control_inference_time", [inference_time])
             sleep(1)
         except Exception as e:
             print(f"AI Thread Error: {e}", flush=True)
@@ -116,6 +132,8 @@ def inference(node_data, data_result):
     edge_model_result = node_data
     edge_model_result = np.reshape(edge_model_result, (-1, 32))
     control_predictions = loaded_model.predict(edge_model_result)
+    send_metrics("inference_result", [int(abs(control_predictions.tolist()[0][0]))])
+    print("Inference Result:",abs(control_predictions.tolist()[0][0]),flush=True)
     # If result does not exist do not do training
     if data_result == "empty" or data_result == 'empty':
         print("No result", flush=True)
@@ -129,6 +147,7 @@ def inference(node_data, data_result):
     print(f"Buffer:{len(X_data)}/{BUFFER_SIZE}")
 
     if len(X_data) >= BUFFER_SIZE:
+        start_time = time()
         for i in range(len(X_data)):
            numpy_X_data = np.concatenate((numpy_X_data, X_data[i].reshape(1, -1)), axis=0)
            numpy_Y_data = np.concatenate((numpy_Y_data, Y_data[i].reshape(1, -1)), axis=0)
@@ -140,6 +159,7 @@ def inference(node_data, data_result):
         # Compile and train the control_model
         print(f"Training Model with batch size: {BATCH_SIZE}", flush=True)
         print(f"Total values in storage:",len(numpy_X_data))
+
         optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
         dataset = tf.data.Dataset.from_tensor_slices((numpy_X_data, numpy_Y_data))
         dataset = dataset.batch(BATCH_SIZE)
@@ -148,12 +168,14 @@ def inference(node_data, data_result):
                 with tf.GradientTape() as tape:  # Move this inside the batch loop
                     predictions = loaded_model(batch_X, training=True)  
                     loss = tf.keras.losses.MeanSquaredError()(batch_Y, predictions)
-
                 gradients = tape.gradient(loss, loaded_model.trainable_variables)  
                 optimizer.apply_gradients(zip(gradients, loaded_model.trainable_variables))
 
             print(f"Epoch {epoch+1}, Loss: {loss.numpy()}")
-        
+        training_time = time() - start_time
+        send_metrics("control_training_loss", [int(loss.numpy())])
+        send_metrics("control_training_time", [training_time])
+        send_metrics("dataset_size", [len(numpy_X_data)])
 
         if len(numpy_X_data) > MAX_DATASET_SIZE:
             numpy_X_data = numpy_X_data[-MAX_DATASET_SIZE:]
@@ -174,7 +196,9 @@ def inference(node_data, data_result):
             print(f"Backpropagating weights to edge on",back_prop_url,flush=True)
 
             response = requests.post(back_prop_url, json=payload)
+            send_metrics("control_gradient_update_sent", [1])
             print(response,flush=True)
+    
 
 
 @app.route('/get_weights', methods=['GET'])

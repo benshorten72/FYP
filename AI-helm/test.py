@@ -42,21 +42,15 @@ print("Split learning enabled:",SPLIT_LEARNING)
 def send_metrics(data_name,values):
     try:    
         response=requests.post(METRICS_SERVER,json={'cluster_name':CLUSTER_NAME,'data_name':data_name,'time':datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
-        values:values})
+        'values':values})
         response.raise_for_status() 
         print(f"Metrics sent successfully: {data_name}")
     except requests.exceptions.RequestException as e:
-        # Handle connection errors, timeouts, or invalid responses
         print(f"Failed to send metrics: {e}")
     except ValueError as e:
-        # Handle JSON serialization errors
         print(f"Invalid data format: {e}")
     except Exception as e:
-        # Catch any other unexpected errors
-        print(f"Unexpected error: {e}")
-
-    
-    
+        print(f"Unexpected error: {e}")    
 
 if SPLIT_LEARNING.lower()=="true":
     temp=True
@@ -408,7 +402,7 @@ def do_inference():
                     print("Edge model thinks its raining:",prob_rain,"mm",flush=True)
                 else:
                     print("Edge model thinks its dry:",prob_rain,"mm",flush=True)
-                send_metrics("edge_inference",[prob_rain])
+                send_metrics("edge_inference",[int(prob_rain[0])])
                 send_to_control_model(node_data,result,original_cluster)
         sleep(5)
 
@@ -416,7 +410,9 @@ def send_to_control_model(node_data,result,original_cluster):
     node_list = node_data.tolist()
     sending_url = f"http://control.local/{original_cluster}/edge_result"
     if result == None:
-        result = "empty" 
+        result = "empty"
+    # else:
+    #     result = float(result # This shfits the decimal place up so fine data doesnt get lost when converting to decimal
     headers = {'Content-Type': 'application/json'}
     requests.post(sending_url,json={'node_data': node_list,'name':original_cluster,'result':result},headers=headers)
 print("starting inference thread")

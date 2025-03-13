@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metrics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .data-button { 
+            cursor: pointer; 
+            background-color: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 15px; 
+            margin: 5px; 
+            border-radius: 5px; 
+            display: inline-block;
+        }
+        .data-button:hover { background-color: #0056b3; }
+        .chart-container { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>Metrics Dashboard</h1>
+    <div id="data-names">
+        <!-- List of data names will be populated here -->
+    </div>
+    <div id="charts">
+        <!-- Charts will be displayed here -->
+    </div>
+
+    <script>
+        async function fetchDataNames() {
+            const response = await fetch('/metrics/get_data_names');
+            return response.json();
+        }
+
+        function renderDataNames(dataNames) {
+            const dataNamesContainer = document.getElementById('data-names');
+            dataNamesContainer.innerHTML = dataNames.map(name => `
+                <button class="data-button" onclick="loadMetrics('${name}')">${name}</button>
+            `).join('');
+        }
+
+        async function loadMetrics(dataName) {
+            const response = await fetch(`/metrics/get_metrics/${dataName}`);
+            const metrics = await response.json();
+
+            const chartsContainer = document.getElementById('charts');
+            chartsContainer.innerHTML = `<h2>${dataName}</h2>`; // Set title
+
+            for (const [cluster, data] of Object.entries(metrics)) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 800;
+                canvas.height = 400;
+                chartsContainer.appendChild(canvas);
+                
+                const ctx = canvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map(entry => entry[1]),
+                        datasets: [{
+                            label: `${dataName} - ${cluster}`,
+                            data: data.map(entry => entry[0]),
+                            borderColor: 'rgba(75, 110, 132, 1)',
+                            borderWidth: 2,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            x: { title: { display: true, text: 'Time' } },
+                            y: { title: { display: true, text: 'Value' } }
+                        }
+                    }
+                });
+            }
+        }
+
+        async function init() {
+            const dataNames = await fetchDataNames();
+            renderDataNames(dataNames);
+        }
+
+        init();
+    </script>
+</body>
+</html>
