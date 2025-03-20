@@ -64,7 +64,6 @@ def get_metrics(data_name):
         logging.error(f"Error fetching metrics: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
-
 def add_time_series_data(metrics_dict,cluster,data_name,time,values):
     if data_name not in metrics_dict.keys():
         metrics_dict[data_name]={}

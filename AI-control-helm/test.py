@@ -36,8 +36,8 @@ PROFILE_URL = f"http://{CLUSTER_NAME}.local/core-metadata/api/v3/device/profile/
 CONTROL_URL = "http://control.local"
 CONTROL_AI_URL = CONTROL_URL + f"/{CLUSTER_NAME}"
 METRICS_SERVER= "http://control.local/metrics/add_metrics"
-
-MAX_DATASET_SIZE = 1000  
+LEARNING_THRESHOLD= 3
+MAX_DATASET_SIZE = 10000  
 BATCH_SIZE = 16
 
 loaded_model = tf.keras.models.load_model(MODEL_PATH)
@@ -90,10 +90,16 @@ def edge_result():
         node_data = json_data["node_data"]
         name = json_data["name"]
         result = float(json_data.get("result"))
+        raw = json_data.get("raw")
+        if raw is not None:
+            print("Raw data present for back propagation")
+        else:
+            raw = None  
+
         print("Actual data result:",result)
         print(f"Processing data for node: {name}")
         with data_lock:
-            data_buffer.append({"node_data": node_data, "result": result})
+            data_buffer.append({"node_data": node_data, "result": result,"raw":raw})
         return jsonify({"message": "Data received successfully", "name": name, "data_length": len(node_data)}), 200
 
     except Exception as e:
@@ -118,21 +124,26 @@ def ai_thread():
 
             if data_point:
                 start_time = time()
-                inference(data_point["node_data"], data_point["result"])
+                inference(data_point["node_data"], data_point["result"],data_point["raw"])
                 inference_time = time() - start_time
                 send_metrics("control_inference_time", [inference_time])
             sleep(1)
         except Exception as e:
             print(f"AI Thread Error: {e}", flush=True)
 
-def inference(node_data, data_result):
+def inference(node_data, data_result,raw):
     global numpy_X_data, numpy_Y_data, weights
     node_data = np.array(node_data)
+    print(type(data_result))
+    if data_result!= 0.0:
+        data_result = data_result/1000
+
     data_result = np.array([data_result])
     edge_model_result = node_data
     edge_model_result = np.reshape(edge_model_result, (-1, 32))
     control_predictions = loaded_model.predict(edge_model_result)
-    send_metrics("inference_result", [int(abs(control_predictions.tolist()[0][0]))])
+    send_metrics("control_inference_result", [float(abs(control_predictions.tolist()[0][0]))])
+    send_metrics("control_inference_vs_result", [abs(float(abs(control_predictions.tolist()[0][0]))-data_result[0])])
     print("Inference Result:",abs(control_predictions.tolist()[0][0]),flush=True)
     # If result does not exist do not do training
     if data_result == "empty" or data_result == 'empty':
@@ -144,10 +155,32 @@ def inference(node_data, data_result):
         # Add data_result to Y and beginnging nodes to X
     X_data.append(edge_model_result)
     Y_data.append(data_result)
+
     print(f"Buffer:{len(X_data)}/{BUFFER_SIZE}")
 
+    if SPLIT_CHECK:
+        if raw == None:
+            print("Missing original data input to send back to control to complete back propagation")
+        else:
+            edge_model_result = tf.convert_to_tensor(edge_model_result, dtype=tf.float32)
+            with tf.GradientTape(persistent=True) as tape:
+                tape.watch(edge_model_result)
+                control_predictions = loaded_model(edge_model_result, training=True)
+                loss = tf.keras.losses.MeanSquaredError()(data_result, control_predictions)
+
+            gradients = tape.gradient(loss, edge_model_result)
+            gradients_serializable = [grad.numpy().tolist() for grad in gradients]
+            
+            # Send the cut gradient to the head model via HTTP
+            payload = {"gradients": gradients_serializable,"raw":raw,"result":data_result.tolist()}
+
+            back_prop_url=f"http://{CLUSTER_NAME}.local/ai/back_propagate"
+            print(f"Backpropagating weights to edge on",back_prop_url,flush=True)
+
+            response = requests.post(back_prop_url, json=payload)
+            send_metrics("control_gradient_update_sent", [1])
+            print(response,flush=True)
     if len(X_data) >= BUFFER_SIZE:
-        start_time = time()
         for i in range(len(X_data)):
            numpy_X_data = np.concatenate((numpy_X_data, X_data[i].reshape(1, -1)), axis=0)
            numpy_Y_data = np.concatenate((numpy_Y_data, Y_data[i].reshape(1, -1)), axis=0)
@@ -155,50 +188,37 @@ def inference(node_data, data_result):
         # Clear lists for the next batch
         X_data.clear()
         Y_data.clear()
-
+        if len(numpy_X_data) <= LEARNING_THRESHOLD:
+            print(f"Dataset not large enough to preform learning {len(numpy_X_data)}/{LEARNING_THRESHOLD}")
+        else:
         # Compile and train the control_model
-        print(f"Training Model with batch size: {BATCH_SIZE}", flush=True)
-        print(f"Total values in storage:",len(numpy_X_data))
+            print(f"Training Model with batch size: {BATCH_SIZE}", flush=True)
+            print(f"Total values in storage:",len(numpy_X_data))
+            start_time = time()
 
-        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-        dataset = tf.data.Dataset.from_tensor_slices((numpy_X_data, numpy_Y_data))
-        dataset = dataset.batch(BATCH_SIZE)
-        for epoch in range(5):  
-            for batch_X, batch_Y in dataset:
-                with tf.GradientTape() as tape:  # Move this inside the batch loop
-                    predictions = loaded_model(batch_X, training=True)  
-                    loss = tf.keras.losses.MeanSquaredError()(batch_Y, predictions)
-                gradients = tape.gradient(loss, loaded_model.trainable_variables)  
-                optimizer.apply_gradients(zip(gradients, loaded_model.trainable_variables))
+            optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+            dataset = tf.data.Dataset.from_tensor_slices((numpy_X_data, numpy_Y_data))
+            dataset = dataset.batch(BATCH_SIZE)
+            for epoch in range(2):  
+                for batch_X, batch_Y in dataset:
+                    with tf.GradientTape() as tape:  # Move this inside the batch loop
+                        predictions = loaded_model(batch_X, training=True)  
+                        loss = tf.keras.losses.MeanSquaredError()(batch_Y, predictions)
+                    gradients = tape.gradient(loss, loaded_model.trainable_variables)  
+                    optimizer.apply_gradients(zip(gradients, loaded_model.trainable_variables))
 
-            print(f"Epoch {epoch+1}, Loss: {loss.numpy()}")
-        training_time = time() - start_time
-        send_metrics("control_training_loss", [int(loss.numpy())])
-        send_metrics("control_training_time", [training_time])
-        send_metrics("dataset_size", [len(numpy_X_data)])
+                print(f"Epoch {epoch+1}, Loss: {loss.numpy()}")
+            training_time = time() - start_time
+            send_metrics("control_training_loss", [float(loss.numpy())])
+            send_metrics("control_training_time", [training_time])
+            send_metrics("dataset_size", [len(numpy_X_data)])
 
-        if len(numpy_X_data) > MAX_DATASET_SIZE:
-            numpy_X_data = numpy_X_data[-MAX_DATASET_SIZE:]
-            numpy_Y_data = numpy_Y_data[-MAX_DATASET_SIZE:]
+            if len(numpy_X_data) > MAX_DATASET_SIZE:
+                numpy_X_data = numpy_X_data[-MAX_DATASET_SIZE:]
+                numpy_Y_data = numpy_Y_data[-MAX_DATASET_SIZE:]
 
-        weights = loaded_model.get_weights()
-        if SPLIT_CHECK:
-            print("Prepping backprop",flush=True)
-            # Compute gradients as usual
-            for var in loaded_model.trainable_variables:
-                print("Variable shape:", var.shape,flush=True)
-            #Get top gradient
-            gradients=[gradients[0]]
-            gradients_serializable = [grad.numpy().tolist() for grad in gradients]
-            # Send the cut gradient to the head model via HTTP
-            payload = {"gradients": gradients_serializable}
-            back_prop_url=f"http://{CLUSTER_NAME}.local/ai/back_propagate"
-            print(f"Backpropagating weights to edge on",back_prop_url,flush=True)
+            weights = loaded_model.get_weights()
 
-            response = requests.post(back_prop_url, json=payload)
-            send_metrics("control_gradient_update_sent", [1])
-            print(response,flush=True)
-    
 
 
 @app.route('/get_weights', methods=['GET'])

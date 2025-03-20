@@ -43,6 +43,13 @@
             `).join('');
         }
 
+        function getRandomColor() {
+            const r = Math.floor(Math.random() * 256);
+            const g = Math.floor(Math.random() * 256);
+            const b = Math.floor(Math.random() * 256);
+            return `rgba(${r}, ${g}, ${b}, 1)`;
+        }
+
         async function loadMetrics(dataName) {
             const response = await fetch(`/metrics/get_metrics/${dataName}`);
             const metrics = await response.json();
@@ -50,33 +57,37 @@
             const chartsContainer = document.getElementById('charts');
             chartsContainer.innerHTML = `<h2>${dataName}</h2>`; // Set title
 
+            const canvas = document.createElement('canvas');
+            canvas.width = 800;
+            canvas.height = 400;
+            chartsContainer.appendChild(canvas);
+            
+            const ctx = canvas.getContext('2d');
+            const datasets = [];
+
             for (const [cluster, data] of Object.entries(metrics)) {
-                const canvas = document.createElement('canvas');
-                canvas.width = 800;
-                canvas.height = 400;
-                chartsContainer.appendChild(canvas);
-                
-                const ctx = canvas.getContext('2d');
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: data.map(entry => entry[1]),
-                        datasets: [{
-                            label: `${dataName} - ${cluster}`,
-                            data: data.map(entry => entry[0]),
-                            borderColor: 'rgba(75, 110, 132, 1)',
-                            borderWidth: 2,
-                            fill: false
-                        }]
-                    },
-                    options: {
-                        scales: {
-                            x: { title: { display: true, text: 'Time' } },
-                            y: { title: { display: true, text: 'Value' } }
-                        }
-                    }
+                datasets.push({
+                    label: `${dataName} - ${cluster}`,
+                    data: data.map(entry => entry[0]),
+                    borderColor: getRandomColor(),
+                    borderWidth: 2,
+                    fill: false
                 });
             }
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Object.values(metrics)[0].map(entry => entry[1]), // Assuming all clusters have the same time labels
+                    datasets: datasets
+                },
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Time' } },
+                        y: { title: { display: true, text: 'Value' } }
+                    }
+                }
+            });
         }
 
         async function init() {

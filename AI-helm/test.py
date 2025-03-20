@@ -62,8 +62,8 @@ if SPLIT_LEARNING.lower()=="true":
     loaded_model = tf.keras.models.load_model(MODEL_PATH)
     loaded_model.compile(optimizer='adam',
                         loss='mean_squared_error',
-                        metrics=['mae'])
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+                        metrics=['mae', 'mae'])
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.00001)
     for layer in loaded_model.layers:
         layer.trainable = True
     loaded_model.get_layer("edge_output").trainable = False
@@ -230,11 +230,16 @@ def handle_incoming_data():
                 incoming_data[column] = None
     send_metrics("edge_data_buffer_size",[len(data_buffer)])
     if len(data_buffer) == BUFFER_SIZE:
-        partioned_data = data_buffer[len(data_buffer)//2:]
-        with data_lock:
-            print("data buffer halved")
-            data_buffer = data_buffer[:len(data_buffer)//2]
-        make_space(partioned_data)
+        buffers = get_buffers()
+        if not buffers:
+            print("No buffersavalible to distribute load")
+        else:
+            print("Buffers avalible to distribute load")
+            partioned_data = data_buffer[len(data_buffer)//2:]
+            with data_lock:
+                print("Data buffer halved")
+                data_buffer = data_buffer[:len(data_buffer)//2]
+            make_space(partioned_data,buffers)
 
 thread = threading.Thread(target=mqtt_thread)
 thread.daemon = True 
@@ -243,30 +248,48 @@ thread.start()
 @app.route('/back_propagate',methods=['POST'])
 def back_propagate():
     data = request.get_json()
-    print("Back propagation recieved. Applying to model",flush=True)
-    #Fix imports and optimser stufff
+    print("Back propagation received. Applying to model", flush=True)
+
+    for layer in loaded_model.layers:
+        layer.trainable = True
+    loaded_model.get_layer("edge_output").trainable=False
+
     if SPLIT_CHECK:
-        received_gradients = [tf.convert_to_tensor(np.array(g), dtype=tf.float32) for g in data["gradients"]]       
+        for layer in loaded_model.layers:
+            layer.trainable = True
+        loaded_model.get_layer("edge_output").trainable = False
+        received_gradients = [tf.reshape(tf.convert_to_tensor(data["gradients"], dtype=tf.float32), (1, -1))]        
+        original_input_data = np.array([data["raw"]],dtype=np.float32)
+
         with training_lock:
-            grads_and_vars = list(zip(received_gradients, loaded_model.trainable_variables))
-            for var in loaded_model.trainable_variables:
-                print(f"Trainable Variable Shape: {var.shape}", flush=True)
+            with tf.GradientTape() as tape:
+                edge_output = loaded_model(original_input_data, training=True)
+            tape.watch(edge_output)
+            edge_model_grads = tape.gradient(edge_output, loaded_model.trainable_variables, output_gradients=received_gradients)
+            optimizer.apply_gradients(zip(edge_model_grads, loaded_model.trainable_variables))
 
-            for grad, var in zip(received_gradients, loaded_model.trainable_variables):
-                print(f"Received Gradient shape: {grad.shape}, Variable shape: {var.shape}", flush=True)
+        for layer in loaded_model.layers:
+                layer.trainable = False
+        loaded_model.get_layer("edge_output").trainable = True
+        temp_result = np.array([data["result"]])
+        temp_result = temp_result.reshape(-1, 1) 
+        dummy_output = np.zeros((1, 32), dtype=np.float32)
 
-            # Filter out invalid gradient-variable pairs
-            valid_grads_and_vars = [(g, v) for g, v in grads_and_vars if g.shape == v.shape]
-            # This issue needs to be sorted
-            if len(valid_grads_and_vars) == 0:
-                print("ERROR: No valid gradient-variable pairs!",flush=True)
-            else:
-                print(f"Found {len(valid_grads_and_vars)} valid matching gradients",flush=True)
-                optimizer.apply_gradients(valid_grads_and_vars)
-        print("Applied to model",flush=True)
+        temp_result = np.array(data["result"], dtype=np.float32).reshape(1, 1)
+
+        final_output = [dummy_output, temp_result]
+        print("Original input shape:", original_input_data.shape)
+        print("First output shape:", dummy_output.shape)
+        print("Second output shape:", temp_result.shape)
+        print("Final output type:", type(final_output))
+        print("Final output length:", len(final_output),flush=True)
+        # Train the model
+        loaded_model.fit(original_input_data, final_output, epochs=1, batch_size=1)
+        
+        print("Applied to model", flush=True)
         return jsonify({"message": "Gradients applied successfully!"})
-    return jsonify({"message": "Gradients cannot be applied due to split learning disabled"})
 
+    return jsonify({"message": "Gradients cannot be applied due to split learning disabled"})
 
 @app.route('/get_buffer', methods=['GET'])
 def get_buffer():
@@ -331,12 +354,9 @@ def partition_and_send(candidates,partitioned_data):
         print(f"Sending partioned data to cluster:{cluster}",flush=True)
         send_buffer_to_fit(cluster, data_to_send)
 
-
-def make_space(partioned_data):
+def make_space(partioned_data,buffers):
     space_needed = len(partioned_data)
-    buffers = get_buffers()
-    if not buffers:
-        return
+
     # Contains the candidate and free space they have
     candidates_to_send_data = {}
     if buffers:
@@ -402,19 +422,28 @@ def do_inference():
                     print("Edge model thinks its raining:",prob_rain,"mm",flush=True)
                 else:
                     print("Edge model thinks its dry:",prob_rain,"mm",flush=True)
-                send_metrics("edge_inference",[int(prob_rain[0])])
-                send_to_control_model(node_data,result,original_cluster)
-        sleep(5)
+                send_metrics("edge_inference",[float(prob_rain[0])])
+                send_metrics("edge_inference_vs_result",[abs(float(result)-float(prob_rain[0]))])
+                send_to_control_model(node_data,result,original_cluster,raw)
+        sleep(1)
 
-def send_to_control_model(node_data,result,original_cluster):
+def send_to_control_model(node_data,result,original_cluster,raw):
     node_list = node_data.tolist()
     sending_url = f"http://control.local/{original_cluster}/edge_result"
     if result == None:
         result = "empty"
+    else:
+        print("result:",result)
+        send_metrics("actual_result",[result])
+        result = str(float(result)*1000)
+        
     # else:
     #     result = float(result # This shfits the decimal place up so fine data doesnt get lost when converting to decimal
     headers = {'Content-Type': 'application/json'}
-    requests.post(sending_url,json={'node_data': node_list,'name':original_cluster,'result':result},headers=headers)
+    if SPLIT_CHECK:
+        requests.post(sending_url,json={'node_data': node_list,'name':original_cluster,'result':result,'raw':raw},headers=headers)
+    else:
+        requests.post(sending_url,json={'node_data': node_list,'name':original_cluster,'result':result},headers=headers)
 print("starting inference thread")
 thread_inference = threading.Thread(target=do_inference)
 thread_inference.daemon = True
