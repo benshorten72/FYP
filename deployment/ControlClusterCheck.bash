@@ -20,7 +20,19 @@ else
             echo "Invalid input. Please enter 'y' or 'n'."
         fi
     done
-
+    while true; do
+        echo "Is Interference required (y/n)?"
+        read -p "" interference_check
+        if [[ "$interference_check" =~ ^[Yy]$ ]]; then
+            echo "Interference enabled"
+            break
+        elif [[ "$interference_check" =~ ^[Nn]$ ]]; then
+            echo "Interference disabled"
+            break
+        else
+            echo "Invalid input. Please enter 'y' or 'n'."
+        fi
+    done
     ./CreateClusterBase.bash
     kubectl config use-context k3d-control 
     echo "Deploying control container"
@@ -31,4 +43,7 @@ else
             ./ParameterServerCreation.bash
     fi
     ./MetricsServerCreation.bash
+    if [[ "$interference_check" =~ ^[Yy]$ ]]; then
+        ./Interference.bash
+    fi
 fi

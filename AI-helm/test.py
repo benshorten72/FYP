@@ -253,6 +253,7 @@ def back_propagate():
     for layer in loaded_model.layers:
         layer.trainable = True
     loaded_model.get_layer("edge_output").trainable=False
+    print("1", flush=True)
 
     if SPLIT_CHECK:
         for layer in loaded_model.layers:
@@ -260,6 +261,7 @@ def back_propagate():
         loaded_model.get_layer("edge_output").trainable = False
         received_gradients = [tf.reshape(tf.convert_to_tensor(data["gradients"], dtype=tf.float32), (1, -1))]        
         original_input_data = np.array([data["raw"]],dtype=np.float32)
+        print("2", flush=True)
 
         with training_lock:
             with tf.GradientTape() as tape:
@@ -267,6 +269,7 @@ def back_propagate():
             tape.watch(edge_output)
             edge_model_grads = tape.gradient(edge_output, loaded_model.trainable_variables, output_gradients=received_gradients)
             optimizer.apply_gradients(zip(edge_model_grads, loaded_model.trainable_variables))
+        print("3", flush=True)
 
         for layer in loaded_model.layers:
                 layer.trainable = False
@@ -274,6 +277,7 @@ def back_propagate():
         temp_result = np.array([data["result"]])
         temp_result = temp_result.reshape(-1, 1) 
         dummy_output = np.zeros((1, 32), dtype=np.float32)
+        print("4", flush=True)
 
         temp_result = np.array(data["result"], dtype=np.float32).reshape(1, 1)
 

@@ -82,11 +82,11 @@ fi
 echo "Using k3d to create cluster - disabling inbuilt loadbalancer and using testbed network"
 # use correct model depending on cluster type
 if [[ $cluster_name == "control" ]]; then
-    model_abs_path=$(realpath ./models/control_model.keras)
+    model_abs_path=$(realpath ./models/control_modelS3.keras)
   elif [[ $split_check == "True" ]]; then
-    model_abs_path=$(realpath ./models/edge_model.keras)
+    model_abs_path=$(realpath ./models/edge_modelS3.keras)
   elif [[ $split_check == "False" ]]; then
-    model_abs_path=$(realpath ./models/edge_model.tflite)
+    model_abs_path=$(realpath ./models/edge_modelS3.tflite)
 fi
 echo "Using $model_abs_path, because split learning enabled = $split_check "
 k3d cluster create $cluster_name --k3s-arg "--disable=servicelb@server:0" --no-lb --wait --network testbed --k3s-arg "--disable=traefik"  --volume $model_abs_path:/mnt/model
