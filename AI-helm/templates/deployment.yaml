@@ -53,3 +53,6 @@ spec:
         - name: model-storage
           hostPath:
             path: /mnt/model
+securityContext:
+  capabilities:
+    add: ["NET_ADMIN"]

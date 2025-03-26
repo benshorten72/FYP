@@ -43,7 +43,4 @@ else
             ./ParameterServerCreation.bash
     fi
     ./MetricsServerCreation.bash
-    if [[ "$interference_check" =~ ^[Yy]$ ]]; then
-        ./Interference.bash
-    fi
 fi
