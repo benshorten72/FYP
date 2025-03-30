@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
-        .data-button { 
+        .data-button, .download-button { 
             cursor: pointer; 
             background-color: #007bff; 
             color: white; 
@@ -17,12 +17,13 @@
             border-radius: 5px; 
             display: inline-block;
         }
-        .data-button:hover { background-color: #0056b3; }
+        .data-button:hover, .download-button:hover { background-color: #0056b3; }
         .chart-container { margin: 20px 0; }
     </style>
 </head>
 <body>
     <h1>Metrics Dashboard</h1>
+    <button class="download-button" onclick="downloadAllData()">Download Data</button>
     <div id="data-names">
         <!-- List of data names will be populated here -->
     </div>
@@ -90,6 +91,35 @@
             });
         }
 
+        async function downloadAllData() {
+            const dataNames = await fetchDataNames();
+            let zipContent = {};
+            
+            for (const dataName of dataNames) {
+                const response = await fetch(`/metrics/get_metrics/${dataName}`);
+                const metrics = await response.json();
+
+                for (const [cluster, data] of Object.entries(metrics)) {
+                    const filePath = `data/${cluster}/${dataName}.txt`;
+                    const fileContent = data.map(entry => `${entry[1]}, ${entry[0]}`).join('\n');
+
+                    zipContent[filePath] = fileContent;
+                }
+            }
+
+            const zip = new JSZip();
+            for (const [filePath, content] of Object.entries(zipContent)) {
+                zip.file(filePath, content);
+            }
+
+            zip.generateAsync({ type: "blob" }).then(blob => {
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = "data.zip";
+                a.click();
+            });
+        }
+
         async function init() {
             const dataNames = await fetchDataNames();
             renderDataNames(dataNames);
@@ -97,5 +127,6 @@
 
         init();
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
 </body>
 </html>

@@ -36,7 +36,7 @@ PROFILE_URL = f"http://{CLUSTER_NAME}.local/core-metadata/api/v3/device/profile/
 CONTROL_URL = "http://control.local"
 CONTROL_AI_URL = CONTROL_URL + f"/{CLUSTER_NAME}"
 METRICS_SERVER= "http://control.local/metrics/add_metrics"
-LEARNING_THRESHOLD= 3
+LEARNING_THRESHOLD= 350
 MAX_DATASET_SIZE = 10000  
 BATCH_SIZE = 16
 
@@ -163,7 +163,7 @@ def inference(node_data, data_result,raw):
             print("Missing original data input to send back to control to complete back propagation")
         else:
             edge_model_result = tf.convert_to_tensor(edge_model_result, dtype=tf.float32)
-            with tf.GradientTape(persistent=True) as tape:
+            with tf.GradientTape(persistent=True) as tape: # Remember this is not training the data, we are simply getting gradients
                 tape.watch(edge_model_result)
                 control_predictions = loaded_model(edge_model_result, training=True)
                 loss = tf.keras.losses.MeanSquaredError()(data_result, control_predictions)
@@ -180,6 +180,7 @@ def inference(node_data, data_result,raw):
             response = requests.post(back_prop_url, json=payload)
             send_metrics("control_gradient_update_sent", [1])
             print(response,flush=True)
+            
     if len(X_data) >= BUFFER_SIZE:
         for i in range(len(X_data)):
            numpy_X_data = np.concatenate((numpy_X_data, X_data[i].reshape(1, -1)), axis=0)
@@ -237,6 +238,16 @@ def set_weights():
     json_data = request.get_json(force=True)
     json_weights = json_data["weights"]
     fed_weights = [np.array(w) for w in json_weights]
+    current_weights = loaded_model.get_weights()
+    diffs = []
+    for i in range(len(current_weights)):
+        change = np.abs(current_weights[i]-fed_weights[i])/fed_weights[i]
+        diffs.append(change)
+    
+    sums = np.array([np.nansum(x) for x in diffs])
+    counts = np.array([np.count_nonzero(~np.isnan(x)) for x in diffs])
+    overall_change = np.sum(sums)/np.sum(counts)
+    send_metrics("Weight difference after federation",[overall_change])
     return jsonify({"Scuess": 'good'}), 200
 
 def run_flask_app():

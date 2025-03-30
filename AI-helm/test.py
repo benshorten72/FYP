@@ -221,7 +221,7 @@ def handle_incoming_data():
             processed_data["cluster_name"] = CLUSTER_NAME
             # Add result = None, if no result has been added
             # This means that on the model it will preform only inference
-            # If result does exist it will use it as labled data
+            # If result does exist it will use it as 0labled data
             if not "result" in processed_data.keys():
                 processed_data["result"]=None
             data_buffer.append(dict(processed_data))
@@ -288,8 +288,10 @@ def back_propagate():
         print("Final output type:", type(final_output))
         print("Final output length:", len(final_output),flush=True)
         # Train the model
-        loaded_model.fit(original_input_data, final_output, epochs=1, batch_size=1)
-        
+        with tf.GradientTape() as tape:
+            history = loaded_model.fit(original_input_data, final_output, epochs=1, batch_size=1)
+        loss_value = history.history['loss'][0]
+        send_metrics("edge_training_loss",[loss_value])
         print("Applied to model", flush=True)
         return jsonify({"message": "Gradients applied successfully!"})
 
@@ -426,7 +428,7 @@ def do_inference():
                     print("Edge model thinks its raining:",prob_rain,"mm",flush=True)
                 else:
                     print("Edge model thinks its dry:",prob_rain,"mm",flush=True)
-                send_metrics("edge_inference",[float(prob_rain[0])])
+                send_metrics("edge_inference",[abs(float(prob_rain[0]))])
                 send_metrics("edge_inference_vs_result",[abs(float(result)-float(prob_rain[0]))])
                 send_to_control_model(node_data,result,original_cluster,raw)
         sleep(1)
