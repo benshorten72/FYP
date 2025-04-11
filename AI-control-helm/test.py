@@ -7,6 +7,7 @@ import os
 import numpy as np
 import tensorflow as tf
 import json
+import psutil
 from datetime import datetime
 from time import time
 
@@ -19,12 +20,19 @@ log.setLevel(logging.ERROR)
 CLUSTER_NAME = os.getenv("CLUSTER_NAME")
 CLUSTER_RANK = os.getenv("CLUSTER_RANK")
 SPLIT_LEARNING = os.getenv("SPLIT_CHECK")
+USE_EARLY_CHECK = os.getenv("USE_EARLY_STOPPING")
+
 if SPLIT_LEARNING.lower()=="true":
     temp=True
 else:
     temp=False
-
 SPLIT_CHECK=temp
+
+if USE_EARLY_CHECK.lower()=="true":
+    temp=True
+else:
+    temp=False
+USE_EARLY_STOPPING=temp
 print(f"Split Learning enabled: {SPLIT_CHECK}")
 
 PORT = os.getenv("PORT")
@@ -36,10 +44,14 @@ PROFILE_URL = f"http://{CLUSTER_NAME}.local/core-metadata/api/v3/device/profile/
 CONTROL_URL = "http://control.local"
 CONTROL_AI_URL = CONTROL_URL + f"/{CLUSTER_NAME}"
 METRICS_SERVER= "http://control.local/metrics/add_metrics"
-LEARNING_THRESHOLD= 350
-MAX_DATASET_SIZE = 10000  
+LEARNING_THRESHOLD= 200
+MAX_DATASET_SIZE = 10000
 BATCH_SIZE = 16
+VAL_SPLIT_RATIO = 0.2  # 20% of BUFFER_SIZE for validation
 
+best_val_loss = float('inf')
+patience = 3 
+wait = 0
 loaded_model = tf.keras.models.load_model(MODEL_PATH)
 loaded_model.compile(optimizer='adam',
                      loss='mean_squared_error',
@@ -55,6 +67,11 @@ print(f"Max content length: {app.config['MAX_CONTENT_LENGTH']} bytes")
     
 numpy_X_data = np.empty((0, 32))
 numpy_Y_data = np.empty((0, 1))
+numpy_X_train = np.empty((0, 32))
+numpy_Y_train = np.empty((0, 1))
+numpy_X_val = np.empty((0, 32))
+numpy_Y_val = np.empty((0, 1))
+
 ## Vars that need to be defined for the function
 # Recieve node_data, data_result
 weights = loaded_model.get_weights() 
@@ -62,6 +79,11 @@ X_data = []
 Y_data = []
 fed_weights = None
 print("Port:",PORT)
+
+def get_process_memory():
+    process = psutil.Process(os.getpid())
+    return process.memory_info().rss / (1024 ** 2)  # MB
+
 def send_metrics(data_name,values):
     try:    
         response=requests.post(METRICS_SERVER,json={'cluster_name':CLUSTER_NAME,'data_name':data_name,'time':datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
@@ -132,7 +154,7 @@ def ai_thread():
             print(f"AI Thread Error: {e}", flush=True)
 
 def inference(node_data, data_result,raw):
-    global numpy_X_data, numpy_Y_data, weights
+    global numpy_X_data, numpy_Y_data, numpy_X_train, numpy_Y_train, numpy_X_val, numpy_Y_val,weights, best_val_loss, wait
     node_data = np.array(node_data)
     print(type(data_result))
     if data_result!= 0.0:
@@ -182,9 +204,20 @@ def inference(node_data, data_result,raw):
             print(response,flush=True)
             
     if len(X_data) >= BUFFER_SIZE:
+        # Split into training/validation sets
+        split_idx = int(BUFFER_SIZE * (1 - VAL_SPLIT_RATIO))
+        X_train, X_val = X_data[:split_idx], X_data[split_idx:]
+        Y_train, Y_val = Y_data[:split_idx], Y_data[split_idx:]
+        
         for i in range(len(X_data)):
-           numpy_X_data = np.concatenate((numpy_X_data, X_data[i].reshape(1, -1)), axis=0)
-           numpy_Y_data = np.concatenate((numpy_Y_data, Y_data[i].reshape(1, -1)), axis=0)
+            numpy_X_data = np.concatenate((numpy_X_data, X_data[i].reshape(1, -1)), axis=0)
+            numpy_Y_data = np.concatenate((numpy_Y_data, Y_data[i].reshape(1, -1)), axis=0)
+        for i in range(len(X_train)):
+            numpy_X_train = np.concatenate((numpy_X_train, X_train[i].reshape(1, -1)), axis=0)
+            numpy_Y_train = np.concatenate((numpy_Y_train, Y_train[i].reshape(1, -1)), axis=0)
+        for i in range(len(X_val)):
+            numpy_X_val = np.concatenate((numpy_X_val, X_val[i].reshape(1, -1)), axis=0)
+            numpy_Y_val = np.concatenate((numpy_Y_val, Y_val[i].reshape(1, -1)), axis=0)
 
         # Clear lists for the next batch
         X_data.clear()
@@ -194,27 +227,51 @@ def inference(node_data, data_result,raw):
         else:
         # Compile and train the control_model
             print(f"Training Model with batch size: {BATCH_SIZE}", flush=True)
-            print(f"Total values in storage:",len(numpy_X_data))
+            print(f"Total values in storage:",len(numpy_X_train))
             start_time = time()
 
             optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-            dataset = tf.data.Dataset.from_tensor_slices((numpy_X_data, numpy_Y_data))
-            dataset = dataset.batch(BATCH_SIZE)
-            for epoch in range(2):  
-                for batch_X, batch_Y in dataset:
-                    with tf.GradientTape() as tape:  # Move this inside the batch loop
-                        predictions = loaded_model(batch_X, training=True)  
-                        loss = tf.keras.losses.MeanSquaredError()(batch_Y, predictions)
-                    gradients = tape.gradient(loss, loaded_model.trainable_variables)  
+            train_dataset = tf.data.Dataset.from_tensor_slices((numpy_X_train, numpy_Y_train))
+            train_dataset = train_dataset.batch(BATCH_SIZE)
+
+            # Validation dataset
+            val_dataset = tf.data.Dataset.from_tensor_slices((numpy_X_val, numpy_Y_val))
+            val_dataset = val_dataset.batch(BATCH_SIZE)
+
+            for epoch in range(2):
+                # Training loop
+                for batch_X, batch_Y in train_dataset:
+                    with tf.GradientTape() as tape:
+                        predictions = loaded_model(batch_X, training=True)
+                        train_loss = tf.keras.losses.MeanSquaredError()(batch_Y, predictions)
+                    gradients = tape.gradient(train_loss, loaded_model.trainable_variables)
                     optimizer.apply_gradients(zip(gradients, loaded_model.trainable_variables))
 
+                val_loss = 0
+                for val_X, val_Y in val_dataset:
+                    val_pred = loaded_model(val_X, training=False)
+                    val_loss += tf.keras.losses.MeanSquaredError()(val_Y, val_pred)
+                val_loss /= len(val_dataset)
+
+                # Early stopping logic
+                if USE_EARLY_STOPPING:
+                    if val_loss < best_val_loss:
+                        best_val_loss = val_loss
+                        wait = 0
+                    else:
+                        wait += 1
+                        if wait >= patience:
+                            print(f"Early stopping at epoch {epoch+1}!",flush=True)
+                            send_metrics("early_learning_epoch_stop",[epoch+1])
+                            break
+                print(f"Epoch {epoch+1}, Train Loss: {train_loss.numpy()}, Val Loss: {val_loss.numpy()}")
                 print(f"Epoch {epoch+1}, Loss: {loss.numpy()}")
             training_time = time() - start_time
             send_metrics("control_training_loss", [float(loss.numpy())])
             send_metrics("control_training_time", [training_time])
             send_metrics("dataset_size", [len(numpy_X_data)])
 
-            if len(numpy_X_data) > MAX_DATASET_SIZE:
+            if len(numpy_X_data) > MAX_DATASET_SIZE:  # Trims if needed
                 numpy_X_data = numpy_X_data[-MAX_DATASET_SIZE:]
                 numpy_Y_data = numpy_Y_data[-MAX_DATASET_SIZE:]
 
@@ -234,21 +291,48 @@ def get_weights():
 @app.route('/set_weights', methods=['POST'])
 def set_weights():
     global fed_weights
-    print("Weights federating incoming")
-    json_data = request.get_json(force=True)
-    json_weights = json_data["weights"]
-    fed_weights = [np.array(w) for w in json_weights]
-    current_weights = loaded_model.get_weights()
-    diffs = []
-    for i in range(len(current_weights)):
-        change = np.abs(current_weights[i]-fed_weights[i])/fed_weights[i]
-        diffs.append(change)
-    
-    sums = np.array([np.nansum(x) for x in diffs])
-    counts = np.array([np.count_nonzero(~np.isnan(x)) for x in diffs])
-    overall_change = np.sum(sums)/np.sum(counts)
-    send_metrics("Weight difference after federation",[overall_change])
-    return jsonify({"Scuess": 'good'}), 200
+    try:
+        print("Weights federating incoming")
+        json_data = request.get_json(force=True)
+        
+        if not json_data or "weights" not in json_data:
+            return jsonify({"error": "Invalid input: missing weights"}), 400
+            
+        # Convert and store weights
+        json_weights = json_data["weights"]
+        fed_weights = [np.array(w, dtype=np.float64) for w in json_weights]
+        current_weights = loaded_model.get_weights()
+        
+        if len(current_weights) != len(fed_weights):
+            return jsonify({"error": "Weight shape mismatch"}), 400
+            
+        diffs = []
+        for i in range(len(current_weights)):
+            # Safe division with epsilon to avoid divide-by-zero
+            denominator = np.where(
+                np.abs(fed_weights[i]) < 1e-10, 
+                1e-10,
+                fed_weights[i]
+            )
+            relative_diff = np.abs(current_weights[i] - fed_weights[i]) / denominator
+            diffs.append(relative_diff)
+        
+        sums = np.array([np.nansum(x) for x in diffs])
+        counts = np.array([np.count_nonzero(~np.isnan(x) & ~np.isinf(x)) for x in diffs])
+        
+        if np.sum(counts) == 0:
+            overall_change = 0  
+        else:
+            overall_change = np.sum(sums) / np.sum(counts)
+        
+        # Log metrics
+        send_metrics("Weight difference after federation", [float(overall_change)])
+        
+        return jsonify({"success": True, "avg_change": float(overall_change)}), 200
+        
+    except Exception as e:
+        print(f"Error in set_weights: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 def run_flask_app():
     app.run(host='0.0.0.0', port=PORT,threaded=True)
@@ -282,4 +366,5 @@ print("Gettting federated weights")
 requests.post("https://control.local/parameter-server/update_my_weights",{"name":CLUSTER_NAME},verify=False)
 
 while True:
+    send_metrics("control_python_memory_usage",[get_process_memory()])
     sleep(2)

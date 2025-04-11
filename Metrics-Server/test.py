@@ -1,3 +1,4 @@
+from datetime import datetime
 from time import sleep
 from flask import Flask, request, jsonify, render_template
 import threading
@@ -37,7 +38,7 @@ def add_metrics():
             return jsonify({"error": "Missing 'values'"}), 400
         cluster_name = data["cluster_name"]
         data_name = data["data_name"]
-        time = data["time"]
+        time = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         values= data["values"]
 
         if len(values)==1:

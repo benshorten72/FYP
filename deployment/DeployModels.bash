@@ -62,5 +62,7 @@ helm install $cluster_name-ai ../AI-control-helm/ \
   --set env[1].value=$split_check \
   --set env[2].name=CLUSTER_NAME \
   --set env[2].value=$cluster_name \
+  --set env[3].name=USE_EARLY_STOPPING \
+  --set env[3].value=$USE_EARLY_STOPPING \
 
 echo "Now accesible on http://control.local/$cluster_name"

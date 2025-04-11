@@ -55,6 +55,24 @@ echo "You have defined the IP range as 172.100.150.$ip_start_range-172.100.150.$
 
 echo "Creating docker subnet 172.100.0.0/16 for testbed"
 docker network create --subnet 172.100.0.0/16 testbed
+echo "Cluster name: $cluster_name"
+# Loop to get the starting IP range
+while true; do
+  read -p "Enter the cluster memory resource limit (in GB): " memory_resource_limit
+  if [[ "$memory_resource_limit" =~ ^[0-64]+$ ]]; then
+    break
+  else
+    echo "Invalid input. Please enter a numeric value."
+  fi
+done
+while true; do
+  read -p "Enter the cluster core resource limit (how many cores to use): " cpu_resource_limit
+  if [[ "$cpu_resource_limit" =~ ^[0-64]+$ ]]; then
+    break
+  else
+    echo "Invalid input. Please enter a numeric value."
+  fi
+done
 if [[ $cluster_name != "control" ]]; then
   while true; do
       echo "Does this need to preform split learning? This will require a more computationally expensive \n running on edge due to need for Tensorflow and a full python image rather than a silm \n
@@ -79,17 +97,36 @@ if [[ $cluster_name != "control" ]]; then
       fi
   done
 fi
+
+if [[ $cluster_name != "control" ]]; then
+  while true; do
+      echo "Does the control model need early stopping to improve training (y/n)?"
+      read -p "" choice
+      if [[ "$choice" =~ ^[Yy]$ ]]; then
+          echo "Split learning enabled"
+          export USE_EARLY_STOPPING="True"
+          break
+      elif [[ "$choice" =~ ^[Nn]$ ]]; then
+          export USE_EARLY_STOPPING="False"
+          break
+      else
+          echo "Invalid input. Please enter 'y' or 'n'."
+      fi
+  done
+fi
+
 echo "Using k3d to create cluster - disabling inbuilt loadbalancer and using testbed network"
 # use correct model depending on cluster type
 if [[ $cluster_name == "control" ]]; then
-    model_abs_path=$(realpath ./models/control_modelS3.keras)
+    model_abs_path=$(realpath ./models/trained_control_model.keras)
   elif [[ $split_check == "True" ]]; then
-    model_abs_path=$(realpath ./models/edge_modelS3.keras)
+    model_abs_path=$(realpath ./models/trained_edge_model.keras)
   elif [[ $split_check == "False" ]]; then
-    model_abs_path=$(realpath ./models/edge_modelS3.tflite)
+    model_abs_path=$(realpath ./models/trained_edge_model.tflite)
 fi
 echo "Using $model_abs_path, because split learning enabled = $split_check "
-k3d cluster create $cluster_name --k3s-arg "--disable=servicelb@server:0" --no-lb --wait --network testbed --k3s-arg "--disable=traefik"  --volume $model_abs_path:/mnt/model
+k3d cluster create $cluster_name --k3s-arg "--disable=servicelb@server:0" --no-lb --wait --network testbed --k3s-arg "--disable=traefik"  --volume $model_abs_path:/mnt/model \
+  --agents-memory 2G
 
 kubectl config use-context k3d-$cluster_name
 

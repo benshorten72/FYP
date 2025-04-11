@@ -40,4 +40,5 @@ env:
     value: "false"
   - name: CLUSTER_NAME
     value: ""
-  
+  - name: USE_EARLY_STOPPING
+    value: "false"

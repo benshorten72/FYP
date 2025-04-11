@@ -1,5 +1,6 @@
 from random import randint
 from time import sleep
+import time
 from typing import List
 import paho.mqtt.client as mqtt
 from flask import Flask, request, jsonify
@@ -9,17 +10,19 @@ import os
 import numpy as np
 import json
 from datetime import datetime
+import psutil
 
 from ai_edge_litert.interpreter  import Interpreter
 requests.packages.urllib3.util.connection.HAS_IPV6 = False
 import os
 import sys
 import stat
+
 CLUSTER_NAME =os.getenv("CLUSTER_NAME")
 CLUSTER_RANK =os.getenv("CLUSTER_RANK")
 SPLIT_LEARNING=os.getenv("SPLIT_CHECK")
 
-INTERVAL = 3 # Maybe env var
+INTERVAL = 2 # Maybe env var
 COLUMNS = ["ind","indt","temp","indw","wetb","dewpt","vappr","rhum","msl","indm","wdsp","indwd","wddir","ww","w","sun","vis","clht","clamt","result"] # env var 
 BUFFER_SIZE = 10 # Env var 
 RAIN_THRESHOLD = 0.5
@@ -80,7 +83,7 @@ else:
     loaded_model.invoke()
     output_details = loaded_model.get_output_details()
     output_data = loaded_model.get_tensor(output_details[0]['index'])
-    
+
 SPLIT_CHECK=temp
 
 for i in COLUMNS:
@@ -101,6 +104,9 @@ def get_clusters():
             if name != CLUSTER_NAME:
                 clusters[name] = rank
 
+def get_process_memory():
+    process = psutil.Process(os.getpid())
+    return process.memory_info().rss / (1024 ** 2)  # MB
 
 def mqtt_thread():
     def on_message(client, userdata, message):
@@ -201,6 +207,7 @@ def handle_incoming_data():
     # Check if number of connected devices is equal to COLUMNS and that buffer size isnt overflowing
     print(f"Current listeners: {len(listeners)}")
     # Check if all the listners needed are present EXCEPT result
+    send_metrics("timestamp",[datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")])
     len_listeners = len(listeners)
     len_columns = len(COLUMNS)
     if "result" in COLUMNS:
@@ -256,6 +263,7 @@ def back_propagate():
     print("1", flush=True)
 
     if SPLIT_CHECK:
+        start_time=time.time()
         for layer in loaded_model.layers:
             layer.trainable = True
         loaded_model.get_layer("edge_output").trainable = False
@@ -282,17 +290,15 @@ def back_propagate():
         temp_result = np.array(data["result"], dtype=np.float32).reshape(1, 1)
 
         final_output = [dummy_output, temp_result]
-        print("Original input shape:", original_input_data.shape)
-        print("First output shape:", dummy_output.shape)
-        print("Second output shape:", temp_result.shape)
-        print("Final output type:", type(final_output))
-        print("Final output length:", len(final_output),flush=True)
+
         # Train the model
         with tf.GradientTape() as tape:
             history = loaded_model.fit(original_input_data, final_output, epochs=1, batch_size=1)
         loss_value = history.history['loss'][0]
         send_metrics("edge_training_loss",[loss_value])
         print("Applied to model", flush=True)
+        training_time = time.time() - start_time
+        send_metrics("edge_training_time", [training_time])
         return jsonify({"message": "Gradients applied successfully!"})
 
     return jsonify({"message": "Gradients cannot be applied due to split learning disabled"})
@@ -319,6 +325,7 @@ def fit_data():
             print(f"Loosing data:",len(sorted_data[10:]),flush=True)
             print("*"*40,flush=True)
             print("\n",flush=True)
+
 
         return jsonify({"message": "Data received and processed successfully"}), 200
     except Exception as e:
@@ -431,7 +438,7 @@ def do_inference():
                 send_metrics("edge_inference",[abs(float(prob_rain[0]))])
                 send_metrics("edge_inference_vs_result",[abs(float(result)-float(prob_rain[0]))])
                 send_to_control_model(node_data,result,original_cluster,raw)
-        sleep(1)
+        sleep(2)
 
 def send_to_control_model(node_data,result,original_cluster,raw):
     node_list = node_data.tolist()
@@ -458,4 +465,5 @@ thread_inference.start()
 if __name__ == "__main__":
     while True:
         fetch_devices()
+        send_metrics("edge_python_memory_usage",[get_process_memory()])
         sleep(INTERVAL)
